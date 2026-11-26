@@ -34,7 +34,7 @@ Linux(WSL 포함)에서 다음이 필요합니다. 없으면 설치 스크립트
 
 **VS Code 확장으로** (확장 하나만 있으면 됩니다)
 
-1. [`vscode-extension/accepttc-0.2.0.vsix`](vscode-extension/accepttc-0.2.0.vsix)를 받아 설치합니다: `code --install-extension accepttc-0.2.0.vsix`
+1. [`vscode-extension/accepttc-0.3.0.vsix`](vscode-extension/accepttc-0.3.0.vsix)를 받아 설치합니다: `code --install-extension accepttc-0.3.0.vsix`
 2. 프로젝트 폴더를 열고 명령 팔레트(Ctrl+Shift+P)에서 `AcceptTC: 이 프로젝트에 설치`를 실행합니다.
 
 **한 줄로**
@@ -90,7 +90,11 @@ cd AcceptTC
 ### 검증 과정 보기
 
 - **브라우저**: `.accepttc/verification/index.html`을 엽니다. HTML 파일 하나라서 서버가 필요 없습니다.
-- **VS Code**: 확장을 설치하면 상태 표시줄에 `TC 승인 수/전체 수`가 나오고, 클릭하면 편집기 탭으로 검증 현황이 열립니다. 검증이 기록되면 자동으로 갱신되고, 화면의 파일 이름을 누르면 그 줄이 열립니다. 확장은 `code --install-extension vscode-extension/accepttc-0.2.0.vsix` 또는 `./install.sh --vscode`로 설치합니다.
+- **VS Code**: 확장을 설치하면 왼쪽 활동 표시줄에 AcceptTC 아이콘이 생깁니다. 확장은 `code --install-extension vscode-extension/accepttc-0.3.0.vsix` 또는 `./install.sh --vscode`로 설치합니다.
+  - **사이드바 목록**: 구현 코드가 잠겼는지와, 테스트 케이스를 상태별(거부, 미검증, 승인 등)로 보여줍니다. 테스트 케이스를 펼치면 테스트 코드, 인용한 명세 줄, 검증 회차별 보고서로 바로 갈 수 있습니다.
+  - **코드 위 표시**: 테스트 파일을 열면 각 테스트 케이스 위에 `✓ TC-XXX-001 · 승인`처럼 상태가 나오고, 누르면 그 테스트 케이스의 검증 과정이 열립니다.
+  - **상태 표시줄**: `TC 승인 수/전체 수`.
+  - **검증 현황 탭**: 브라우저에서 보는 것과 같은 페이지를 편집기 탭으로 엽니다. 검증이 기록되면 자동으로 갱신됩니다.
 
 ### 명령
 

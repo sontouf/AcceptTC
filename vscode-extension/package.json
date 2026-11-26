@@ -1,8 +1,8 @@
 {
   "name": "accepttc",
   "displayName": "AcceptTC",
-  "description": "테스트 케이스 승인 게이트(AcceptTC)를 프로젝트에 설치하고, 검증 현황을 VS Code 안에서 봅니다. 서버가 필요 없습니다.",
-  "version": "0.2.0",
+  "description": "테스트 케이스 승인 게이트(AcceptTC)를 프로젝트에 설치하고, 테스트 케이스별 검증 상태와 과정을 VS Code 안에서 봅니다. 서버가 필요 없습니다.",
+  "version": "0.3.0",
   "publisher": "sontouf",
   "license": "MIT",
   "repository": {
@@ -21,29 +21,43 @@
   ],
   "main": "./extension.js",
   "activationEvents": [
-    "workspaceContains:**/.accepttc/tc_gate.py"
+    "workspaceContains:**/.accepttc/tc_gate.py",
+    "onView:accepttc.cases"
   ],
   "contributes": {
     "commands": [
       {
         "command": "accepttc.install",
-        "title": "AcceptTC: 이 프로젝트에 설치"
+        "title": "AcceptTC: 이 프로젝트에 설치",
+        "icon": "$(cloud-download)"
       },
       {
         "command": "accepttc.openDashboard",
-        "title": "AcceptTC: 검증 현황 열기"
+        "title": "AcceptTC: 검증 현황 열기",
+        "icon": "$(open-preview)"
       },
       {
         "command": "accepttc.refresh",
-        "title": "AcceptTC: 검증 현황 새로 고침"
+        "title": "AcceptTC: 새로 고침",
+        "icon": "$(refresh)"
       },
       {
         "command": "accepttc.doctor",
-        "title": "AcceptTC: 설치 상태 점검"
+        "title": "AcceptTC: 설치 상태 점검",
+        "icon": "$(pulse)"
       },
       {
         "command": "accepttc.uninstall",
         "title": "AcceptTC: 이 프로젝트에서 제거"
+      },
+      {
+        "command": "accepttc.showCase",
+        "title": "AcceptTC: 검증 과정 보기",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "accepttc.openFile",
+        "title": "AcceptTC: 파일 열기"
       }
     ],
     "configuration": {
@@ -55,6 +69,82 @@
           "description": "tc_gate.py 를 실행할 Python 명령"
         }
       }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "accepttc",
+          "title": "AcceptTC",
+          "icon": "media/accepttc.svg"
+        }
+      ]
+    },
+    "views": {
+      "accepttc": [
+        {
+          "id": "accepttc.cases",
+          "name": "테스트 케이스",
+          "icon": "media/accepttc.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "accepttc.cases",
+        "when": "!accepttc.installed",
+        "contents": "이 작업 폴더에는 AcceptTC 가 설치되어 있지 않습니다.\n[이 프로젝트에 설치](command:accepttc.install)\n설치하면 에이전트가 쓴 테스트 케이스가 명세에 근거해 쓰였는지 검증된 뒤에만 구현 코드를 수정할 수 있습니다."
+      },
+      {
+        "view": "accepttc.cases",
+        "when": "accepttc.installed",
+        "contents": "아직 테스트 케이스가 없습니다.\nClaude Code 에 테스트 작성을 시키면 여기에 승인 상태가 나타납니다.\n[설치 상태 점검](command:accepttc.doctor)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "accepttc.openDashboard",
+          "when": "view == accepttc.cases && accepttc.installed",
+          "group": "navigation@1"
+        },
+        {
+          "command": "accepttc.refresh",
+          "when": "view == accepttc.cases && accepttc.installed",
+          "group": "navigation@2"
+        },
+        {
+          "command": "accepttc.doctor",
+          "when": "view == accepttc.cases && accepttc.installed",
+          "group": "1_more@1"
+        },
+        {
+          "command": "accepttc.install",
+          "when": "view == accepttc.cases",
+          "group": "1_more@2"
+        },
+        {
+          "command": "accepttc.uninstall",
+          "when": "view == accepttc.cases && accepttc.installed",
+          "group": "1_more@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "accepttc.showCase",
+          "when": "view == accepttc.cases && viewItem == case",
+          "group": "inline"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "accepttc.showCase",
+          "when": "false"
+        },
+        {
+          "command": "accepttc.openFile",
+          "when": "false"
+        }
+      ]
     }
   }
 }

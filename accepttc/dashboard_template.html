@@ -558,6 +558,17 @@
   document.getElementById("tab-code").addEventListener("click", function () { state.tab = "code"; render(); });
   renderTop();
   render();
+  if (vsc) {
+    // the extension's sidebar can ask the page to show one test case
+    window.addEventListener("message", function (e) {
+      var id = e.data && e.data.select;
+      if (!id || !D.cases.some(function (c) { return c.id === id; })) return;
+      state.tab = "cases"; state.id = id; state.filter = "ALL"; state.attempt = null;
+      render();
+      window.scrollTo(0, 0);
+    });
+    vsc.postMessage({ ready: true });
+  }
 })();
 </script>
 </body>

@@ -16,6 +16,8 @@ tests live (`test_globs`), which files count as specification (`spec_globs`),
 which files are locked production code (`production_globs`), and the language
 of explanations (`language`). Read it first. Run
 `python3 .accepttc/tc_gate.py doctor` to see the effective settings.
+You do not need to read `.accepttc/tc_gate.py` itself or look up `entire`
+commands; this skill and the tool's output tell you what to do.
 
 A test case is one test function or block in the project's framework (for
 example one GoogleTest `TEST`, one pytest `test_*` function, one JUnit `@Test`

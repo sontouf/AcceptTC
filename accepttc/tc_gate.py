@@ -752,9 +752,16 @@ def collect_status(events=None):
         res = check_file(tf, events)
         for cid, c in res["cases"].items():
             entry = reg["cases"].get(cid)
-            rows.append({"id": cid, "test_file": tf, "test": c["test"],
+            rows.append({"id": cid, "test_file": tf, "test": c["test"], "line": c["line"],
                          "status": case_status(entry, c["hash"]),
-                         "rejected": rejected_count(entry or {})})
+                         "rejected": rejected_count(entry or {}),
+                         "objective": c["trace"].get("objective"),
+                         "sources": [{"ref": x.get("ref"), "file": x.get("file"), "lines": str(x.get("lines"))}
+                                     for x in c["trace"].get("sources") or [] if isinstance(x, dict)],
+                         "attempts": [{"n": a.get("n"), "verdict": a.get("verdict"), "at": a.get("at"),
+                                       "by": a.get("by"),
+                                       "report": "%s/%s/attempt-%s.md" % (REPORT_DIR, cid, a.get("n"))}
+                                      for a in (entry or {}).get("attempts") or []]})
     return rows
 
 
