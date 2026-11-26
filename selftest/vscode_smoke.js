@@ -5,7 +5,7 @@ const Module = require("module");
 const path = require("path");
 const project = path.resolve(process.argv[2] || ".");
 const commands = {};
-const state = { status: null, panel: null, messages: [], opened: [] };
+const state = { status: null, panel: null, messages: [], opened: [], sent: [] };
 const disposable = { dispose() {} };
 const watcher = { onDidChange: () => disposable, onDidCreate: () => disposable, onDidDelete: () => disposable, dispose() {} };
 const vscode = {
@@ -14,6 +14,7 @@ const vscode = {
   MarkdownString: class { constructor(v) { this.value = v; } },
   Range: class { constructor(a, b, c, d) { this.start = { line: a }; } },
   workspace: {
+    workspaceFolders: [{ uri: { fsPath: project } }],
     findFiles: async () => [{ fsPath: path.join(project, ".accepttc", "tc_gate.py") }],
     getConfiguration: () => ({ get: () => "python3" }),
     createFileSystemWatcher: () => watcher,
@@ -28,6 +29,9 @@ const vscode = {
       webview: { html: "", onDidReceiveMessage(fn) { state.onMessage = fn; } },
       onDidDispose() {}, reveal() {} }),
     showWarningMessage: (m) => state.messages.push("WARN " + m),
+    showErrorMessage: (m) => state.messages.push("ERROR " + m),
+    showInformationMessage: async (m, opts, label) => label,
+    createTerminal: () => ({ show() {}, sendText: (t) => state.sent.push(t) }),
     showQuickPick: async (items) => items[0],
     showTextDocument: async () => {},
   },
@@ -38,7 +42,8 @@ Module._load = (request, ...rest) => (request === "vscode" ? vscode : load(reque
 const ext = require("../vscode-extension/extension.js");
 
 (async () => {
-  ext.activate({ subscriptions: [] });
+  const extensionPath = path.join(__dirname, "..", "vscode-extension");
+  ext.activate({ subscriptions: [], extensionPath });
   await commands["accepttc.openDashboard"]();
   await new Promise((r) => setTimeout(r, 1500));
   const html = state.panel.webview.html;
@@ -48,6 +53,11 @@ const ext = require("../vscode-extension/extension.js");
   await state.onMessage({ open: ".accepttc/config.json", line: 1 });
   await state.onMessage({ open: "../../outside.txt", line: 1 });
   check("opens project files only: " + JSON.stringify(state.opened.map((p) => path.relative(project, p))), state.opened.length === 1);
+  await commands["accepttc.install"]();
+  const expected = "bash '" + path.join(extensionPath, "payload", "install.sh") + "' '" + project + "'";
+  check("install command runs the bundled installer: " + state.sent[0], state.sent[0] === expected);
+  await commands["accepttc.uninstall"]();
+  check("uninstall passes --uninstall", / --uninstall '/.test(state.sent[1] || ""));
   if (state.messages.length) console.log(state.messages.join("\n"));
   ext.deactivate();
 })();

@@ -30,17 +30,26 @@ Linux(WSL 포함)에서 다음이 필요합니다. 없으면 설치 스크립트
 | [Entire CLI](https://docs.entire.io/cli/installation) | 에이전트 세션 로그 기록 |
 | [Claude Code](https://claude.com/claude-code) | 에이전트 실행 |
 
-```bash
-git clone https://github.com/sontouf/AcceptTC.git
-cd AcceptTC
-./install.sh /path/to/your/project
-```
+설치 방법은 세 가지이고 결과는 같습니다.
 
-내려받지 않고 바로 설치할 수도 있습니다.
+**VS Code 확장으로** (확장 하나만 있으면 됩니다)
+
+1. [`vscode-extension/accepttc-0.2.0.vsix`](vscode-extension/accepttc-0.2.0.vsix)를 받아 설치합니다: `code --install-extension accepttc-0.2.0.vsix`
+2. 프로젝트 폴더를 열고 명령 팔레트(Ctrl+Shift+P)에서 `AcceptTC: 이 프로젝트에 설치`를 실행합니다.
+
+**한 줄로**
 
 ```bash
 cd /path/to/your/project
 curl -fsSL https://raw.githubusercontent.com/sontouf/AcceptTC/main/install.sh | bash
+```
+
+**저장소를 받아서**
+
+```bash
+git clone https://github.com/sontouf/AcceptTC.git
+cd AcceptTC
+./install.sh /path/to/your/project
 ```
 
 설치 스크립트가 하는 일은 다음과 같습니다.
@@ -81,7 +90,7 @@ curl -fsSL https://raw.githubusercontent.com/sontouf/AcceptTC/main/install.sh | 
 ### 검증 과정 보기
 
 - **브라우저**: `.accepttc/verification/index.html`을 엽니다. HTML 파일 하나라서 서버가 필요 없습니다.
-- **VS Code**: `./install.sh --vscode`로 확장을 설치하면 상태 표시줄에 `TC 승인 수/전체 수`가 나오고, 클릭하면 편집기 탭으로 검증 현황이 열립니다. 검증이 기록되면 자동으로 갱신되고, 화면의 파일 이름을 누르면 그 줄이 열립니다. 직접 설치하려면 `code --install-extension vscode-extension/accepttc-0.1.0.vsix`를 실행합니다.
+- **VS Code**: 확장을 설치하면 상태 표시줄에 `TC 승인 수/전체 수`가 나오고, 클릭하면 편집기 탭으로 검증 현황이 열립니다. 검증이 기록되면 자동으로 갱신되고, 화면의 파일 이름을 누르면 그 줄이 열립니다. 확장은 `code --install-extension vscode-extension/accepttc-0.2.0.vsix` 또는 `./install.sh --vscode`로 설치합니다.
 
 ### 명령
 
@@ -174,7 +183,7 @@ accepttc/                프로젝트에 설치되는 파일
   dashboard_template.html  검증 현황 페이지의 틀
   installer.py             설치 스크립트가 쓰는 파일 처리
   claude/                  검증 에이전트, 스킬, CLAUDE.md 안내 문단
-vscode-extension/        VS Code 확장 (소스와 .vsix)
+vscode-extension/        VS Code 확장 (소스와 .vsix, build.sh 로 다시 묶음)
 selftest/                도구 자체 테스트
 ```
 

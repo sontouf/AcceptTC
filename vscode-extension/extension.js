@@ -4,6 +4,9 @@
 // keeps it up to date while the agents work, and puts the gate state in the
 // status bar.  It runs `tc_gate.py status` and `tc_gate.py dashboard`, which
 // read files and the Entire session log; no model is called and no server runs.
+//
+// The extension also carries the AcceptTC installer (payload/), so a project can
+// be set up from the command palette without downloading anything else.
 const vscode = require("vscode");
 const cp = require("child_process");
 const fs = require("fs");
@@ -26,7 +29,10 @@ async function findProjects() {
 async function pickProject() {
   const roots = await findProjects();
   if (roots.length === 0) {
-    vscode.window.showWarningMessage("이 작업 폴더에 AcceptTC 가 설치되어 있지 않습니다 (.accepttc/tc_gate.py 없음). install.sh 로 먼저 설치하세요.");
+    const go = "이 프로젝트에 설치";
+    const choice = await vscode.window.showWarningMessage(
+      "이 작업 폴더에 AcceptTC 가 설치되어 있지 않습니다.", go);
+    if (choice === go) vscode.commands.executeCommand("accepttc.install");
     return null;
   }
   if (roots.length === 1) return roots[0];
@@ -119,6 +125,44 @@ async function openDashboard() {
   updateStatusBar();
 }
 
+function shellQuote(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
+
+/** Folder to install into: the workspace folder, or one the user picks. */
+async function pickFolder(title) {
+  const folders = (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath);
+  const other = "다른 폴더 고르기...";
+  let choice = folders.length === 1 ? folders[0] : null;
+  if (!choice) {
+    choice = await vscode.window.showQuickPick([...folders, other], { placeHolder: title });
+    if (!choice) return null;
+  }
+  if (choice === other) {
+    const picked = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false, openLabel: "이 폴더 선택" });
+    return picked && picked[0] ? picked[0].fsPath : null;
+  }
+  return choice;
+}
+
+/** Run the bundled install.sh in a terminal so its checks and guidance are visible. */
+async function runInstaller(context, extraArgs, title, question, confirmLabel) {
+  const script = path.join(context.extensionPath, "payload", "install.sh");
+  if (!fs.existsSync(script)) {
+    vscode.window.showErrorMessage("확장에 설치 파일이 들어 있지 않습니다 (payload/install.sh). 확장을 다시 설치하세요.");
+    return;
+  }
+  if (process.platform === "win32") {
+    vscode.window.showErrorMessage("AcceptTC 설치는 Linux(WSL 포함)에서만 지원합니다. WSL 에 연결된 VS Code 창에서 실행하세요.");
+    return;
+  }
+  const folder = await pickFolder(title);
+  if (!folder) return;
+  const answer = await vscode.window.showInformationMessage(question.replace("{folder}", folder), { modal: true }, confirmLabel);
+  if (answer !== confirmLabel) return;
+  const terminal = vscode.window.createTerminal({ name: "AcceptTC", cwd: folder });
+  terminal.show();
+  terminal.sendText(["bash", shellQuote(script), ...extraArgs, shellQuote(folder)].join(" "));
+}
+
 /** Something under .accepttc or a test/trace file changed: refresh, debounced. */
 function scheduleRefresh(regen) {
   clearTimeout(timer);
@@ -140,15 +184,25 @@ function activate(context) {
   // statuses (STALE), so those regenerate the page first.
   const recorded = vscode.workspace.createFileSystemWatcher("**/.accepttc/{registry.json,verification/index.html}");
   const traces = vscode.workspace.createFileSystemWatcher("**/*.trace.json");
+  const installed = vscode.workspace.createFileSystemWatcher("**/.accepttc/tc_gate.py");
   for (const ev of ["onDidChange", "onDidCreate", "onDidDelete"]) {
     recorded[ev](() => scheduleRefresh(false));
     traces[ev](() => scheduleRefresh(true));
+    installed[ev](() => scheduleRefresh(false));
   }
   const saved = vscode.workspace.onDidSaveTextDocument((doc) => {
     if (!doc.uri.fsPath.includes(path.sep + ".accepttc" + path.sep)) scheduleRefresh(true);
   });
 
-  context.subscriptions.push(output, statusItem, recorded, traces, saved,
+  context.subscriptions.push(output, statusItem, recorded, traces, installed, saved,
+    vscode.commands.registerCommand("accepttc.install", () => runInstaller(context, [],
+      "AcceptTC 를 설치할 프로젝트 폴더",
+      "{folder}\n\n이 폴더에 AcceptTC 를 설치합니다.\n\n- git, python3, Entire CLI 가 있는지 확인합니다 (없으면 설치 명령을 안내하고 멈춥니다)\n- Entire 를 켭니다 (세션 로그는 git push 때 올리지 않도록 설정)\n- .accepttc/ 와 .claude/ 에 게이트 도구, 검증 에이전트, 스킬, 훅, 권한 규칙을 넣습니다\n\n진행 상황은 터미널에 표시됩니다.",
+      "설치")),
+    vscode.commands.registerCommand("accepttc.uninstall", () => runInstaller(context, ["--uninstall"],
+      "AcceptTC 를 제거할 프로젝트 폴더",
+      "{folder}\n\n이 폴더에서 AcceptTC 를 제거합니다. 설정과 승인 기록(.accepttc/)은 남기고, Entire 는 그대로 둡니다.",
+      "제거")),
     vscode.commands.registerCommand("accepttc.openDashboard", openDashboard),
     vscode.commands.registerCommand("accepttc.refresh", async () => {
       const root = panelRoot || (await pickProject());

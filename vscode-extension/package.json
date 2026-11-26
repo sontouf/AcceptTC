@@ -1,21 +1,50 @@
 {
   "name": "accepttc",
   "displayName": "AcceptTC",
-  "description": "테스트 케이스 검증 현황(AcceptTC)을 VS Code 안에서 봅니다. 서버가 필요 없습니다.",
-  "version": "0.1.0",
+  "description": "테스트 케이스 승인 게이트(AcceptTC)를 프로젝트에 설치하고, 검증 현황을 VS Code 안에서 봅니다. 서버가 필요 없습니다.",
+  "version": "0.2.0",
   "publisher": "sontouf",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/sontouf/AcceptTC.git" },
-  "engines": { "vscode": "^1.80.0" },
-  "categories": ["Testing", "Other"],
-  "extensionKind": ["workspace"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sontouf/AcceptTC.git"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Testing",
+    "Other"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
   "main": "./extension.js",
-  "activationEvents": ["workspaceContains:**/.accepttc/tc_gate.py"],
+  "activationEvents": [
+    "workspaceContains:**/.accepttc/tc_gate.py"
+  ],
   "contributes": {
     "commands": [
-      { "command": "accepttc.openDashboard", "title": "AcceptTC: 검증 현황 열기" },
-      { "command": "accepttc.refresh", "title": "AcceptTC: 검증 현황 새로 고침" },
-      { "command": "accepttc.doctor", "title": "AcceptTC: 설치 상태 점검" }
+      {
+        "command": "accepttc.install",
+        "title": "AcceptTC: 이 프로젝트에 설치"
+      },
+      {
+        "command": "accepttc.openDashboard",
+        "title": "AcceptTC: 검증 현황 열기"
+      },
+      {
+        "command": "accepttc.refresh",
+        "title": "AcceptTC: 검증 현황 새로 고침"
+      },
+      {
+        "command": "accepttc.doctor",
+        "title": "AcceptTC: 설치 상태 점검"
+      },
+      {
+        "command": "accepttc.uninstall",
+        "title": "AcceptTC: 이 프로젝트에서 제거"
+      }
     ],
     "configuration": {
       "title": "AcceptTC",
