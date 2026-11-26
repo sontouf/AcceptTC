@@ -1,0 +1,31 @@
+{
+  "name": "accepttc",
+  "displayName": "AcceptTC",
+  "description": "테스트 케이스 검증 현황(AcceptTC)을 VS Code 안에서 봅니다. 서버가 필요 없습니다.",
+  "version": "0.1.0",
+  "publisher": "sontouf",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/sontouf/AcceptTC.git" },
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Testing", "Other"],
+  "extensionKind": ["workspace"],
+  "main": "./extension.js",
+  "activationEvents": ["workspaceContains:**/.accepttc/tc_gate.py"],
+  "contributes": {
+    "commands": [
+      { "command": "accepttc.openDashboard", "title": "AcceptTC: 검증 현황 열기" },
+      { "command": "accepttc.refresh", "title": "AcceptTC: 검증 현황 새로 고침" },
+      { "command": "accepttc.doctor", "title": "AcceptTC: 설치 상태 점검" }
+    ],
+    "configuration": {
+      "title": "AcceptTC",
+      "properties": {
+        "accepttc.python": {
+          "type": "string",
+          "default": "python3",
+          "description": "tc_gate.py 를 실행할 Python 명령"
+        }
+      }
+    }
+  }
+}

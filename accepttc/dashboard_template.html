@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>테스트 케이스 검증 현황</title>
+<style>
+  :root {
+    --page: #f6f6f5; --surface: #ffffff; --sunken: #f1f1f0;
+    --ink: #191919; --ink-2: #666666; --line: #e7e7e7; --line-2: #c2c2c2;
+    --good: #0aac23; --warning: #fbb315; --serious: #f18a59; --critical: #dc3c3d; --idle: #9c9c9c;
+    --mark: #fff3c4; --accent: #2f5fd0; --add: #e3f5e6; --del: #fde7e7;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #111111; --surface: #191919; --sunken: #222222;
+      --ink: #efefef; --ink-2: #9c9c9c; --line: #303030; --line-2: #474747;
+      --mark: #4a3f10; --accent: #8fb0ff; --idle: #777777; --add: #143a1c; --del: #44201f;
+    }
+  }
+  body.vscode-light {
+    --page: #f6f6f5; --surface: #ffffff; --sunken: #f1f1f0; --ink: #191919; --ink-2: #666666;
+    --line: #e7e7e7; --line-2: #c2c2c2; --mark: #fff3c4; --accent: #2f5fd0; --idle: #9c9c9c;
+    --add: #e3f5e6; --del: #fde7e7; }
+  body.vscode-dark, body.vscode-high-contrast {
+    --page: #111111; --surface: #191919; --sunken: #222222; --ink: #efefef; --ink-2: #9c9c9c;
+    --line: #303030; --line-2: #474747; --mark: #4a3f10; --accent: #8fb0ff; --idle: #777777;
+    --add: #143a1c; --del: #44201f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--page); color: var(--ink); font: 14px/1.55 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
+  button { font: inherit; color: inherit; }
+  code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); font-weight: 600; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 20px 20px 60px; }
+  header.top { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+  .sub { color: var(--ink-2); font-size: 12.5px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .tile .n { font-size: 26px; font-weight: 650; line-height: 1.1; }
+  .tile .l { color: var(--ink-2); font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .dot { width: 16px; height: 16px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-size: 10px; font-weight: 700; flex: none; }
+  .dot.APPROVED { background: var(--good); } .dot.REJECTED { background: var(--critical); }
+  .dot.ESCALATED { background: var(--serious); } .dot.STALE { background: var(--warning); color: #0b0b0b; }
+  .dot.UNVERIFIED { background: var(--idle); }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; color: var(--ink-2); }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+
+  .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .list { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+  @media (max-width: 900px) { .list { position: static; max-height: 320px; } }
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); }
+  .chip { border: 1px solid var(--line-2); background: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .item { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 12px; cursor: pointer; }
+  .item:hover { background: var(--sunken); }
+  .item[aria-current="true"] { background: var(--sunken); box-shadow: inset 3px 0 0 var(--ink); }
+  .item .id { font-weight: 600; }
+  .item .name { color: var(--ink-2); font-size: 12px; overflow-wrap: anywhere; }
+  .item .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: flex-start; }
+  .head .title { font-size: 18px; font-weight: 650; }
+  .verdict { border-left: 4px solid var(--idle); background: var(--sunken); padding: 10px 12px; border-radius: 0 6px 6px 0; margin-top: 12px; }
+  .verdict.APPROVED { border-color: var(--good); } .verdict.REJECTED { border-color: var(--critical); }
+  .verdict.ESCALATED { border-color: var(--serious); } .verdict.STALE { border-color: var(--warning); }
+
+  /* process stepper */
+  .steps { display: flex; flex-wrap: wrap; gap: 0; list-style: none; padding: 0; margin: 0; }
+  .steps li { flex: 1 1 150px; position: relative; padding: 0 12px 0 0; min-width: 140px; }
+  .steps li::before { content: ""; position: absolute; top: 11px; left: 24px; right: 0; height: 2px; background: var(--line-2); }
+  .steps li:last-child::before { display: none; }
+  .steps .mk { position: relative; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; background: var(--idle); }
+  .steps .ok .mk { background: var(--good); } .steps .bad .mk { background: var(--critical); }
+  .steps .warn .mk { background: var(--warning); color: #0b0b0b; } .steps .esc .mk { background: var(--serious); }
+  .steps .t { font-weight: 600; margin-top: 6px; }
+  .steps .d { color: var(--ink-2); font-size: 12px; overflow-wrap: anywhere; }
+
+  /* traceability chains */
+  .chain { display: grid; grid-template-columns: minmax(0, 1.25fr) 22px minmax(0, 1fr) 22px minmax(0, 1fr); gap: 0 6px; align-items: start; padding: 12px 0; border-top: 1px solid var(--line); }
+  .chain:first-of-type { border-top: 0; }
+  .chain .arrow { display: grid; place-items: center; color: var(--ink-2); font-size: 16px; padding-top: 28px; }
+  @media (max-width: 1000px) { .chain { grid-template-columns: 1fr; gap: 6px; } .chain .arrow { transform: rotate(90deg); padding-top: 0; } }
+  .col-label { font-size: 11.5px; color: var(--ink-2); font-weight: 600; letter-spacing: .02em; margin-bottom: 4px; }
+  .box { background: var(--sunken); border-radius: 6px; padding: 8px 10px; overflow-wrap: anywhere; }
+  .src { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; overflow: hidden; background: var(--surface); }
+  .src:last-child { margin-bottom: 0; }
+  .src .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: space-between; padding: 5px 8px; background: var(--sunken); font-size: 12px; }
+  .src .ln { display: grid; grid-template-columns: 34px 1fr; gap: 6px; padding: 2px 8px; font-size: 12.5px; color: var(--ink-2); }
+  .src .ln.cited { color: var(--ink); }
+  .src .ln .no { text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
+  mark { background: var(--mark); color: inherit; padding: 0 1px; border-radius: 2px; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; white-space: nowrap; }
+  .tag i { font-style: normal; font-weight: 700; }
+  .tag.ok i { color: var(--good); } .tag.bad i { color: var(--critical); } .tag.weak i { color: var(--serious); }
+  .ref { display: inline-block; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; margin-right: 4px; }
+
+  pre.code { background: var(--sunken); border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 0; white-space: pre; tab-size: 2; }
+  pre.code .a { background: var(--mark); border-radius: 2px; }
+
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+  td.time { font-family: var(--mono); font-size: 12px; white-space: nowrap; color: var(--ink-2); }
+  .kind { font-family: var(--mono); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  tr.before td { background: transparent; }
+  tr.sep td { background: var(--sunken); font-size: 12px; color: var(--ink-2); font-weight: 600; }
+  tr.risk .kind { color: var(--critical); }
+
+  ul.checks { list-style: none; margin: 0; padding: 0; }
+  ul.checks li { display: grid; grid-template-columns: 20px 1fr; gap: 6px; padding: 4px 0; overflow-wrap: anywhere; }
+  ul.checks .i { font-weight: 700; } .i.ok { color: var(--good); } .i.bad { color: var(--critical); } .i.warn { color: var(--serious); }
+
+  .attempts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .attempts button { border: 1px solid var(--line-2); background: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .attempts button[aria-selected="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  ul.findings { margin: 0; padding-left: 18px; } ul.findings li { margin-bottom: 6px; overflow-wrap: anywhere; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .empty { color: var(--ink-2); padding: 30px; text-align: center; }
+  .note { color: var(--ink-2); font-size: 12.5px; margin: 0 0 10px; }
+  .cov .ln { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(120px, auto); gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  .cov .ln.none .txt { color: var(--ink-2); }
+  .cov .no { text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
+  .cov .tcs { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: flex-end; }
+  .diff { border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; margin-bottom: 8px; }
+  .diff .fname { padding: 5px 8px; background: var(--sunken); font-family: var(--mono); font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line); }
+  .diff table { table-layout: fixed; min-width: 760px; }
+  .diff col.no { width: 42px; } .diff col.sg { width: 18px; }
+  .diff th { padding: 4px 8px; border-bottom: 1px solid var(--line); }
+  .diff td { border: 0; padding: 0 6px; font-family: var(--mono); font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .diff td.no { text-align: right; color: var(--ink-2); user-select: none; }
+  .diff td.sg { text-align: center; font-weight: 700; padding: 0; user-select: none; }
+  .diff td.del { background: var(--del); } .diff td.add { background: var(--add); } .diff td.nil { background: var(--sunken); }
+  .diff td.mid { border-left: 1px solid var(--line); }
+  .diff tr.hunk td { background: var(--sunken); color: var(--ink-2); padding: 2px 8px; }
+  details.fold { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 8px; }
+  details.fold > summary { cursor: pointer; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+  details.fold > summary::before { content: "▸"; color: var(--ink-2); }
+  details.fold[open] > summary::before { content: "▾"; }
+  details.fold > summary .subj { font-weight: 600; }
+  details.fold > .in { padding: 0 10px 10px; }
+  .link { background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>테스트 케이스 검증 현황</h1>
+      <div class="sub" id="meta"></div>
+    </div>
+    <div id="lock" class="badge"></div>
+  </header>
+  <div class="tiles" id="tiles"></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-cases" aria-selected="true">테스트 케이스</button>
+    <button role="tab" id="tab-cov" aria-selected="false">요구사항 커버리지</button>
+    <button role="tab" id="tab-code" aria-selected="false">코드 변경 (git)</button>
+  </div>
+  <main id="view"></main>
+</div>
+
+<script id="data" type="application/json">/*__TC_GATE_DATA__*/null</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("data").textContent) || { cases: [], coverage: [], log: {} };
+  var ICON = { APPROVED: "✓", REJECTED: "✕", ESCALATED: "!", STALE: "↻", UNVERIFIED: "?" };
+  var LABEL = { APPROVED: "승인", REJECTED: "거부", ESCALATED: "사람 결정 필요", STALE: "승인 후 변경됨", UNVERIFIED: "미검증" };
+  var KIND = { READ: "명세 읽음", SEARCH: "명세 검색", SHELL: "셸로 명세 조회", WRITE: "테스트 작성/수정",
+               TESTRUN: "빌드/테스트 실행", PROD_READ: "구현 코드 읽음", PROD_WRITE: "구현 코드 수정" };
+  // Inside the VS Code extension's webview: file names open in the editor and the
+  // selection survives a refresh of the page.
+  var vsc = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : null;
+  var saved = (vsc && vsc.getState()) || {};
+  var wanted = saved.id || decodeURIComponent(location.hash.slice(1));
+  if (saved.tab === "cov") wanted = "coverage";
+  if (saved.tab === "code") wanted = "code";
+  function fileRef(file, line, cls) {
+    var label = file + ":" + line;
+    if (!vsc) return el("span", { class: cls || "mono" }, label);
+    return el("button", { class: "link " + (cls || "mono"), title: "편집기에서 열기",
+      on: { click: function () { vsc.postMessage({ open: file, line: parseInt(line, 10) || 1 }); } } }, label);
+  }
+  var state = { tab: wanted === "coverage" ? "cov" : wanted === "code" ? "code" : "cases", filter: "ALL", attempt: null,
+                id: (D.cases.filter(function (c) { return c.id === wanted; })[0] || D.cases[0] || {}).id };
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    for (var k in (attrs || {})) {
+      if (k === "class") n.className = attrs[k];
+      else if (k === "on") for (var ev in attrs.on) n.addEventListener(ev, attrs.on[ev]);
+      else if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
+    }
+    (function add(c) {
+      if (c === null || c === undefined || c === false) return;
+      if (Array.isArray(c)) { c.forEach(add); return; }
+      n.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
+    })(kids);
+    return n;
+  }
+  function badge(status, text) {
+    return el("span", { class: "badge" }, [el("span", { class: "dot " + status, "aria-hidden": "true" }, ICON[status] || "?"),
+      text || (LABEL[status] + " · " + status)]);
+  }
+  function time(ts) {
+    if (!ts) return "";
+    var d = new Date(ts);
+    if (isNaN(d)) return ts;
+    var p = function (x) { return String(x).padStart(2, "0"); };
+    return p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+  function squash(s) { return String(s || "").replace(/\s+/g, " ").trim(); }
+  // highlight `quote` inside `text`, tolerant of whitespace differences
+  function highlighted(text, quote) {
+    var q = squash(quote), out = [];
+    if (!q) return [text];
+    var re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+"));
+    var m = re.exec(text);
+    if (!m) return [text];
+    out.push(text.slice(0, m.index), el("mark", {}, m[0]), text.slice(m.index + m[0].length));
+    return out;
+  }
+  function count(st) { return D.cases.filter(function (c) { return c.status === st; }).length; }
+
+  function renderTop() {
+    var log = D.log || {};
+    document.getElementById("meta").textContent = "생성 " + time(D.generated) + " · 로그 출처: " +
+      (log.error ? "읽지 못함 (" + log.error + ")" : (log.source || "-") + " · 세션 " + (log.sessions || []).length + "개");
+    var lock = document.getElementById("lock");
+    lock.textContent = "";
+    lock.appendChild(badge(D.locked ? "REJECTED" : "APPROVED",
+      D.locked ? "구현 코드 잠김 — 승인 안 된 테스트 케이스가 있음" : "구현 코드 열림 — 모든 테스트 케이스 승인됨"));
+    var tiles = document.getElementById("tiles");
+    tiles.textContent = "";
+    tiles.appendChild(el("div", { class: "tile" }, [el("div", { class: "n" }, D.cases.length), el("div", { class: "l" }, "전체 테스트 케이스")]));
+    ["APPROVED", "REJECTED", "ESCALATED", "STALE", "UNVERIFIED"].forEach(function (st) {
+      tiles.appendChild(el("div", { class: "tile" }, [el("div", { class: "n" }, count(st)),
+        el("div", { class: "l" }, [el("span", { class: "dot " + st, "aria-hidden": "true" }, ICON[st]), LABEL[st]])]));
+    });
+  }
+
+  // unified diff text -> [{file, rows}] ; rows pair removed lines (left) with added lines (right)
+  function parseDiff(text, label) {
+    var files = [], cur = null, dels = [], adds = [], ln = 0, rn = 0;
+    function need() { if (!cur) { cur = { file: label || "", rows: [] }; files.push(cur); } return cur; }
+    function flush() {
+      for (var i = 0; i < Math.max(dels.length, adds.length); i++) need().rows.push({ l: dels[i], r: adds[i] });
+      dels = []; adds = [];
+    }
+    String(text || "").split("\n").forEach(function (line) {
+      var m;
+      if (line.indexOf("diff --git ") === 0) {
+        flush(); m = / b\/(.+)$/.exec(line);
+        cur = { file: m ? m[1] : line.slice(11), rows: [] }; files.push(cur);
+      } else if ((m = /^@@ -(\d+)(?:,\d+)? \+(\d+)/.exec(line))) {
+        flush(); ln = +m[1]; rn = +m[2]; need().rows.push({ hunk: line });
+      } else if (line.indexOf("@@") === 0) {
+        flush(); need().rows.push({ hunk: line });
+      } else if (/^(--- |\+\+\+ |index |new file|deleted file|similarity|rename |old mode|new mode|Binary )/.test(line)) {
+        if (/^Binary /.test(line)) need().rows.push({ hunk: line });
+      } else if (!cur || line.charAt(0) === "\\") {
+        return;
+      } else if (line.charAt(0) === "-") { dels.push({ n: ln++, text: line.slice(1) });
+      } else if (line.charAt(0) === "+") { adds.push({ n: rn++, text: line.slice(1) });
+      } else if (line.charAt(0) === " " || line === "") {
+        flush(); need().rows.push({ l: { n: ln++, text: line.slice(1) }, r: { n: rn++, text: line.slice(1) }, same: true });
+      }
+    });
+    flush();
+    return files.filter(function (f) { return f.rows.length; });
+  }
+  var PROD = new RegExp("^(?:" + (D.prod_re || "(?!)") + ")$"), TESTF = new RegExp("^(?:" + (D.test_re || "(?!)") + ")$");
+  function isProd(file) { return PROD.test(file) && !TESTF.test(file) && !/\.trace\.json$/.test(file); }
+  // side-by-side before/after view; `keep` optionally filters files by name
+  function diffView(text, label, emptyMsg, keep) {
+    var files = parseDiff(text, label).filter(function (f) { return !keep || keep(f.file); });
+    if (!files.length) return el("p", { class: "note" }, emptyMsg || "변경 없음");
+    function side(x, cls, sign, mid) {
+      if (!x) return [el("td", { class: "no nil" + (mid ? " mid" : "") }), el("td", { class: "sg nil" }), el("td", { class: "nil" })];
+      return [el("td", { class: "no " + cls + (mid ? " mid" : "") }, x.n), el("td", { class: "sg " + cls }, sign), el("td", { class: cls }, x.text)];
+    }
+    return files.map(function (f) {
+      return el("div", { class: "diff" }, [
+        f.file ? el("div", { class: "fname" }, f.file) : null,
+        el("table", {}, [
+          el("colgroup", {}, [el("col", { class: "no" }), el("col", { class: "sg" }), el("col"), el("col", { class: "no" }), el("col", { class: "sg" }), el("col")]),
+          el("thead", {}, el("tr", {}, [el("th", { colspan: "3" }, "전 (수정 전)"), el("th", { colspan: "3" }, "후 (수정 후)")])),
+          el("tbody", {}, f.rows.map(function (r) {
+            if (r.hunk) return el("tr", { class: "hunk" }, el("td", { colspan: "6" }, r.hunk));
+            if (r.same) return el("tr", {}, side(r.l, "", "", false).concat(side(r.r, "", "", true)));
+            return el("tr", {}, side(r.l, "del", "−", false).concat(side(r.r, "add", "+", true)));
+          }))])]);
+    });
+  }
+  function fold(summaryKids, bodyKids, open) {
+    return el("details", open ? { class: "fold", open: "" } : { class: "fold" }, [el("summary", {}, summaryKids), el("div", { class: "in" }, bodyKids)]);
+  }
+  // uncommitted changes + commits, each with its before/after diff
+  function historyView(g, emptyMsg, keep) {
+    if (!g || !g.available) return el("p", { class: "note" }, "git 저장소가 아니어서 이력을 볼 수 없습니다.");
+    var has = function (d) { return parseDiff(d).some(function (f) { return !keep || keep(f.file); }); };
+    var kids = [];
+    if (has(g.uncommitted)) kids.push(fold([el("span", { class: "subj" }, "커밋되지 않은 변경"), el("span", { class: "sub" }, "마지막 커밋 대비 현재 작업 폴더")],
+      diffView(g.uncommitted, "", "", keep), true));
+    g.commits.filter(function (c) { return has(c.diff); }).forEach(function (c) {
+      kids.push(fold([el("span", { class: "mono" }, c.short), el("span", { class: "subj" }, c.subject),
+        el("span", { class: "sub" }, time(c.date) + " · " + c.author + (c.checkpoint ? " · Entire 체크포인트 " + c.checkpoint : ""))],
+        [c.checkpoint ? el("p", { class: "note" }, "이 커밋을 만든 에이전트 세션 보기: entire checkpoint explain " + c.checkpoint) : null,
+         diffView(c.diff, "", "", keep)], false));
+    });
+    return kids.length ? kids : el("p", { class: "note" }, emptyMsg || "변경 이력이 없습니다.");
+  }
+  function codeView() {
+    return el("section", { class: "card" }, [el("h2", {}, "테스트와 구현 코드의 변경 이력"),
+      el("p", { class: "note" }, "git이 기록한 변경을 전/후로 나란히 보여줍니다. 왼쪽이 수정 전, 오른쪽이 수정 후이고 − 는 삭제된 줄, + 는 추가된 줄입니다."),
+      historyView(D.code, "아직 테스트나 구현 코드의 변경이 없습니다.")]);
+  }
+  function implAfterApproval(c) {
+    if (c.status !== "APPROVED") return el("p", { class: "note" }, "아직 승인되지 않아 구현 코드가 잠겨 있습니다.");
+    var ok = c.attempts.filter(function (a) { return a.verdict === "APPROVED"; }).pop();
+    var since = ok ? new Date(ok.at) : null;
+    var g = D.code || {};
+    var later = { available: g.available, uncommitted: g.uncommitted,
+      commits: (g.commits || []).filter(function (x) { return since && new Date(x.date) >= since; }) };
+    return [el("p", { class: "note" }, "이 테스트 케이스가 승인된 시각(" + time(ok && ok.at) + ") 이후에 바뀐 구현 코드입니다. 시각 기준이므로 다른 테스트 케이스를 위한 변경도 함께 보일 수 있습니다."),
+      historyView(later, "승인 이후 구현 코드 변경이 아직 없습니다.", isProd)];
+  }
+
+  function sourceBox(s) {
+    var read = { read: ["ok", "✓", "작성 전에 읽음"], weak: ["weak", "!", "검색/셸로만 조회"], none: ["bad", "✕", "읽은 기록 없음"] }[s.read] || ["weak", "?", "-"];
+    return el("div", { class: "src" }, [
+      el("div", { class: "meta" }, [
+        el("span", {}, [el("span", { class: "ref" }, s.ref), fileRef(s.file, s.lines)]),
+        el("span", {}, [
+          el("span", { class: "tag " + (s.quote_ok ? "ok" : "bad") }, [el("i", {}, s.quote_ok ? "✓" : "✕"), s.quote_ok ? "원문 일치" : "원문 불일치"]), " ",
+          el("span", { class: "tag " + read[0] }, [el("i", {}, read[1]), read[2]])])]),
+      s.context.length ? s.context.map(function (l) {
+        return el("div", { class: "ln" + (l.cited ? " cited" : "") }, [el("span", { class: "no" }, l.n),
+          el("span", {}, l.cited ? highlighted(l.text, s.quote) : l.text)]);
+      }) : el("div", { class: "ln cited" }, [el("span", { class: "no" }, ""), el("span", {}, "“" + (s.quote || "") + "”")])
+    ]);
+  }
+  function chain(kind, item, sources) {
+    var refs = item.sources || [];
+    var cited = sources.filter(function (s) { return refs.indexOf(s.ref) >= 0; });
+    var missing = refs.filter(function (r) { return !sources.some(function (s) { return s.ref === r; }); });
+    return el("div", { class: "chain" }, [
+      el("div", {}, [el("div", { class: "col-label" }, "명세 근거"),
+        cited.length ? cited.map(sourceBox) : el("div", { class: "box" }, el("span", { class: "tag bad" }, [el("i", {}, "✕"), "근거 없음"])),
+        missing.length ? el("div", { class: "tag bad" }, [el("i", {}, "✕"), "정의되지 않은 근거: " + missing.join(", ")]) : null]),
+      el("div", { class: "arrow", "aria-hidden": "true" }, "→"),
+      el("div", {}, [el("div", { class: "col-label" }, kind === "oracle" ? "도출 과정" : "선택 이유"),
+        el("div", { class: "box" }, item[kind === "oracle" ? "derivation" : "rationale"] || "(없음)")]),
+      el("div", { class: "arrow", "aria-hidden": "true" }, "→"),
+      el("div", {}, [el("div", { class: "col-label" }, kind === "oracle" ? "기대값 (assertion)" : "입력"),
+        el("div", { class: "box mono" }, item[kind === "oracle" ? "assertion" : "item"] || "(없음)")])
+    ]);
+  }
+  function codeBlock(body) {
+    var pre = el("pre", { class: "code" });
+    String(body || "").split("\n").forEach(function (line, i, all) {
+      var isAssert = /\b(EXPECT|ASSERT)_[A-Z_]+\s*\(/.test(line);
+      pre.appendChild(isAssert ? el("span", { class: "a" }, line) : document.createTextNode(line));
+      if (i < all.length - 1) pre.appendChild(document.createTextNode("\n"));
+    });
+    return pre;
+  }
+  function checks(fails, flags) {
+    var rows = [];
+    (fails || []).forEach(function (f) { rows.push(el("li", {}, [el("span", { class: "i bad" }, "✕"), el("span", {}, f)])); });
+    (flags || []).forEach(function (f) { rows.push(el("li", {}, [el("span", { class: "i warn" }, "!"), el("span", {}, f)])); });
+    if (!rows.length) rows.push(el("li", {}, [el("span", { class: "i ok" }, "✓"),
+      el("span", {}, "모두 통과: 인용문이 명세 원문과 일치하고, 모든 입력·기대값에 근거가 있으며, 테스트 작성 전에 명세를 읽은 기록이 있음")]));
+    return el("ul", { class: "checks" }, rows);
+  }
+
+  function steps(c) {
+    var tl = c.timeline || [];
+    var writes = tl.filter(function (e) { return e.kind === "WRITE"; });
+    var lastWrite = writes.length ? writes[writes.length - 1].ts : null;
+    var reads = tl.filter(function (e) { return e.kind === "READ" && (!lastWrite || e.ts <= lastWrite); });
+    var items = [];
+    items.push([reads.length ? "ok" : "bad", reads.length ? "✓" : "✕", "명세 읽기",
+      reads.length ? time(reads[0].ts) + " · " + reads.length + "회" : "작성 전에 읽은 기록 없음"]);
+    items.push([writes.length ? "ok" : "bad", writes.length ? "✓" : "✕", "테스트 작성",
+      writes.length ? time(lastWrite) + (writes.length > 1 ? " · 수정 " + (writes.length - 1) + "회" : "") : "로그에 작성 기록 없음"]);
+    items.push([c.fails.length ? "bad" : "ok", c.fails.length ? "✕" : "✓", "기계 검사",
+      c.fails.length ? "실패 " + c.fails.length + "건" : "통과" + (c.flags.length ? " · 주의 " + c.flags.length + "건" : "")]);
+    (c.attempts || []).forEach(function (a) {
+      var ok = a.verdict === "APPROVED";
+      items.push([ok ? "ok" : "bad", ok ? "✓" : "✕", "검증 " + a.n + "회차: " + LABEL[a.verdict], time(a.at) + " · " + a.by]);
+    });
+    if (!c.attempts.length) items.push(["", "·", "검증 대기", "아직 검증하지 않음"]);
+    var fin = { APPROVED: ["ok", "✓", "구현 진행 가능", "이 테스트 케이스는 승인됨"],
+                REJECTED: ["bad", "✕", "재작성 필요", "거부 " + c.rejected + "/" + D.max_attempts + "회"],
+                ESCALATED: ["esc", "!", "사람 결정 필요", "거부 " + D.max_attempts + "회 도달"],
+                STALE: ["warn", "↻", "재검증 필요", "승인 뒤 내용이 바뀜"],
+                UNVERIFIED: ["", "·", "구현 잠김", "승인 전"] }[c.status];
+    items.push(fin);
+    return el("ol", { class: "steps" }, items.map(function (s) {
+      return el("li", { class: s[0] }, [el("div", { class: "mk", "aria-hidden": "true" }, s[1]),
+        el("div", { class: "t" }, s[2]), el("div", { class: "d" }, s[3])]);
+    }));
+  }
+
+  function timelineTable(c) {
+    var rows = (c.timeline || []).map(function (e) { return { ts: e.ts, kind: e.kind, text: e.text, session: e.session }; });
+    (c.attempts || []).forEach(function (a) {
+      rows.push({ ts: a.at, kind: "VERDICT", text: "검증 " + a.n + "회차 → " + a.verdict + " (" + a.by + ")", verdict: a.verdict });
+    });
+    rows.sort(function (a, b) { return new Date(a.ts) - new Date(b.ts); });
+    if (!rows.length) return el("p", { class: "note" }, "관련 로그 이벤트가 없습니다.");
+    return el("table", {}, [
+      el("thead", {}, el("tr", {}, [el("th", {}, "시각"), el("th", {}, "행동"), el("th", {}, "대상"), el("th", {}, "세션")])),
+      el("tbody", {}, rows.map(function (r) {
+        var risk = r.kind === "PROD_READ" || r.kind === "PROD_WRITE";
+        return el("tr", { class: risk ? "risk" : "" }, [
+          el("td", { class: "time" }, time(r.ts)),
+          el("td", {}, r.kind === "VERDICT" ? badge(r.verdict, "검증 판정") : el("span", { class: "kind" }, KIND[r.kind] || r.kind)),
+          el("td", { class: r.kind === "VERDICT" ? "" : "mono" }, r.text),
+          el("td", { class: "mono" }, r.session ? r.session.slice(0, 8) : "")]);
+      }))]);
+  }
+
+  function attemptView(c) {
+    var as = c.attempts || [];
+    if (!as.length) return el("p", { class: "note" }, "아직 검증 기록이 없습니다.");
+    var idx = state.attempt === null ? as.length - 1 : Math.min(state.attempt, as.length - 1);
+    var a = as[idx], snap = a.snapshot || {};
+    var changed = snap.body !== undefined && squash(snap.body) !== squash(c.body);
+    return el("div", {}, [
+      el("div", { class: "attempts", role: "tablist" }, as.map(function (x, i) {
+        return el("button", { role: "tab", "aria-selected": String(i === idx), on: { click: function () { state.attempt = i; render(); } } },
+          [el("span", { class: "dot " + x.verdict, "aria-hidden": "true" }, ICON[x.verdict]), x.n + "회차 · " + LABEL[x.verdict]]);
+      })),
+      el("p", { class: "note" }, time(a.at) + " · 판정자 " + a.by + " · 내용 해시 " + String(a.hash).slice(0, 12)),
+      idx > 0 && (c.attempt_diffs || [])[idx] ? el("div", { style: "margin-bottom:12px" }, [
+        el("h3", {}, (idx) + "회차 → " + (idx + 1) + "회차 사이에 고친 내용 (테스트 코드)"),
+        diffView(c.attempt_diffs[idx].code, "", "테스트 코드는 바뀌지 않았습니다."),
+        fold([el("span", { class: "subj" }, "근거 기록(trace)의 변경 보기")], diffView(c.attempt_diffs[idx].trace, "", "근거 기록은 바뀌지 않았습니다."), false)]) : null,
+      el("h3", {}, "검증자의 판단 근거"),
+      el("ul", { class: "findings" }, (a.findings && a.findings.length ? a.findings : ["(기록 없음)"]).map(function (f) { return el("li", {}, f); })),
+      snap.body !== undefined ? el("div", { style: "margin-top:12px" }, [
+        el("h3", {}, "이 회차에서 판정한 테스트 코드" + (changed ? " (현재 코드와 다름)" : " (현재 코드와 동일)")),
+        codeBlock(snap.body)]) : null,
+      snap.fails ? el("div", { style: "margin-top:12px" }, [el("h3", {}, "이 회차의 기계 검사 결과"),
+        checks(snap.fails, (snap.flags || []).concat(snap.file_flags || []))]) : null
+    ]);
+  }
+
+  function detail(c) {
+    var verdictText = {
+      APPROVED: "검증자가 명세만으로 기대값을 다시 도출해 이 테스트 케이스와 일치함을 확인했습니다.",
+      REJECTED: "검증자가 명세와 맞지 않는 부분을 찾았습니다. 아래 판단 근거를 보고 다시 작성해야 합니다.",
+      ESCALATED: "세 번 거부되어 자동 진행을 멈췄습니다. 사람이 직접 결정해야 합니다.",
+      STALE: "승인된 뒤 테스트 본문, 근거 기록 또는 픽스처가 바뀌었습니다. 다시 검증해야 합니다.",
+      UNVERIFIED: "아직 검증자가 판정하지 않았습니다." }[c.status];
+    return el("div", {}, [
+      el("section", { class: "card" }, [
+        el("div", { class: "head" }, [
+          el("div", {}, [el("div", { class: "title" }, c.id), el("div", { class: "mono" }, c.test),
+            el("div", {}, fileRef(c.file, c.line, "sub mono"))]),
+          badge(c.status)]),
+        c.objective ? el("p", { style: "margin:10px 0 0" }, c.objective) : null,
+        el("div", { class: "verdict " + c.status }, verdictText)]),
+      el("section", { class: "card" }, [el("h2", {}, "검증 과정"), steps(c)]),
+      el("section", { class: "card" }, [el("h2", {}, "기대값의 근거 (test oracle)"),
+        el("p", { class: "note" }, "왼쪽은 명세 원문입니다. 노란 표시가 테스트 작성자가 인용한 부분이고, 앞뒤 줄은 문맥 확인용입니다."),
+        c.oracle.length ? c.oracle.map(function (o) { return chain("oracle", o, c.sources); }) : el("p", { class: "note" }, "기대값 근거 기록이 없습니다.")]),
+      el("section", { class: "card" }, [el("h2", {}, "입력의 근거"),
+        c.inputs.length ? c.inputs.map(function (o) { return chain("inputs", o, c.sources); }) : el("p", { class: "note" }, "입력 근거 기록이 없습니다.")]),
+      c.assumptions.length ? el("section", { class: "card" }, [el("h2", {}, "가정 (명세가 정하지 않은 부분)"),
+        el("ul", { class: "checks" }, c.assumptions.map(function (a) {
+          var ok = a && a.approved_by;
+          return el("li", {}, [el("span", { class: "i " + (ok ? "ok" : "warn") }, ok ? "✓" : "!"),
+            el("span", {}, (a && a.text ? a.text : String(a)) + (ok ? " — 승인: " + a.approved_by : " — 사람 승인 없음"))]);
+        }))]) : null,
+      el("div", { class: "two" }, [
+        el("section", { class: "card" }, [el("h2", {}, "테스트 코드 (현재)"),
+          el("p", { class: "note" }, "표시된 줄이 assertion입니다."), codeBlock(c.body)]),
+        el("section", { class: "card" }, [el("h2", {}, "기계 검사 (현재)"), checks(c.fails, c.flags)])]),
+      el("section", { class: "card" }, [el("h2", {}, "검증 회차별 기록"), attemptView(c),
+        c.current_diff && (c.current_diff.code || c.current_diff.trace) ? el("div", { style: "margin-top:12px" }, [
+          el("h3", {}, "마지막 판정 이후 바뀐 내용 (아직 검증되지 않음)"),
+          diffView(c.current_diff.code, "", "테스트 코드는 바뀌지 않았습니다."),
+          fold([el("span", { class: "subj" }, "근거 기록(trace)의 변경 보기")], diffView(c.current_diff.trace, "", "근거 기록은 바뀌지 않았습니다."), false)]) : null]),
+      el("section", { class: "card" }, [el("h2", {}, "이 테스트 파일의 git 이력"),
+        el("p", { class: "note" }, c.file + " 과 근거 기록 파일의 변경을 전/후로 보여줍니다."),
+        historyView((D.files || {})[c.file], "이 파일의 변경 이력이 없습니다.")]),
+      el("section", { class: "card" }, [el("h2", {}, "승인 이후 구현 코드 변경"), implAfterApproval(c)]),
+      el("section", { class: "card" }, [el("h2", {}, "에이전트 동작 로그"),
+        el("p", { class: "note" }, "Entire가 기록한 작성 에이전트의 행동 중 이 테스트 파일과 관련된 것만 시간순으로 보여줍니다. 전체 로그: entire session info <세션ID>"),
+        timelineTable(c)])
+    ]);
+  }
+
+  function casesView() {
+    if (!D.cases.length) return el("div", { class: "card empty" }, "테스트 케이스가 아직 없습니다. (찾는 위치: " + ((D.config || {}).test_globs || []).join(", ") + ")");
+    var shown = D.cases.filter(function (c) { return state.filter === "ALL" || c.status === state.filter; });
+    var cur = D.cases.filter(function (c) { return c.id === state.id; })[0] || shown[0] || D.cases[0];
+    var filters = ["ALL", "APPROVED", "REJECTED", "ESCALATED", "STALE", "UNVERIFIED"].filter(function (f) { return f === "ALL" || count(f); });
+    return el("div", { class: "layout" }, [
+      el("nav", { class: "list", "aria-label": "테스트 케이스 목록" }, [
+        el("div", { class: "filters" }, filters.map(function (f) {
+          return el("button", { class: "chip", "aria-pressed": String(state.filter === f), on: { click: function () { state.filter = f; render(); } } },
+            f === "ALL" ? "전체 " + D.cases.length : LABEL[f] + " " + count(f));
+        })),
+        shown.map(function (c) {
+          return el("button", { class: "item", "aria-current": String(c.id === cur.id), on: { click: function () { state.id = c.id; state.attempt = null; render(); } } }, [
+            el("div", { class: "row" }, [el("span", { class: "id" }, c.id), badge(c.status, LABEL[c.status])]),
+            el("div", { class: "name" }, c.test)]);
+        }),
+        shown.length ? null : el("div", { class: "empty" }, "해당 상태의 테스트 케이스가 없습니다.")]),
+      detail(cur)]);
+  }
+
+  function coverageView() {
+    if (!D.coverage.length) return el("div", { class: "card empty" }, "표시할 명세 파일이 없습니다.");
+    return el("div", {}, D.coverage.map(function (f) {
+      var covered = f.lines.filter(function (l) { return l.cases.length; }).length;
+      return el("section", { class: "card cov" }, [
+        el("h2", { class: "mono" }, f.file),
+        el("p", { class: "note" }, "명세 " + f.lines.length + "줄 중 " + covered + "줄이 테스트 케이스의 근거로 인용됨. 인용되지 않은 줄은 흐리게 표시됩니다. (제목·범위 설명처럼 테스트 대상이 아닌 줄도 포함되어 있습니다.)"),
+        f.lines.map(function (l) {
+          return el("div", { class: "ln" + (l.cases.length ? "" : " none") }, [
+            el("span", { class: "no" }, l.n), el("span", { class: "txt" }, l.text),
+            el("span", { class: "tcs" }, l.cases.length ? l.cases.map(function (c) {
+              return el("button", { class: "link badge", on: { click: function () { state.tab = "cases"; state.id = c.id; state.filter = "ALL"; state.attempt = null; render(); } } },
+                [el("span", { class: "dot " + c.status, "aria-hidden": "true" }, ICON[c.status]), c.id]);
+            }) : el("span", { class: "sub" }, "테스트 케이스 없음"))]);
+        })]);
+    }));
+  }
+
+  function render() {
+    document.getElementById("tab-cases").setAttribute("aria-selected", String(state.tab === "cases"));
+    document.getElementById("tab-cov").setAttribute("aria-selected", String(state.tab === "cov"));
+    document.getElementById("tab-code").setAttribute("aria-selected", String(state.tab === "code"));
+    var view = document.getElementById("view");
+    if (vsc) vsc.setState({ id: state.id, tab: state.tab });
+    try { history.replaceState(null, "", "#" + (state.tab === "cov" ? "coverage" : state.tab === "code" ? "code" : encodeURIComponent(state.id || ""))); } catch (e) {}
+    view.textContent = "";
+    view.appendChild(state.tab === "cases" ? casesView() : state.tab === "cov" ? coverageView() : codeView());
+  }
+  document.getElementById("tab-cases").addEventListener("click", function () { state.tab = "cases"; render(); });
+  document.getElementById("tab-cov").addEventListener("click", function () { state.tab = "cov"; render(); });
+  document.getElementById("tab-code").addEventListener("click", function () { state.tab = "code"; render(); });
+  renderTop();
+  render();
+})();
+</script>
+</body>
+</html>

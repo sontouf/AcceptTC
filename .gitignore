@@ -1,0 +1,6 @@
+.sandbox/
+examples/
+demo/
+__pycache__/
+*.pyc
+node_modules/
