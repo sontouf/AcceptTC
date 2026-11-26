@@ -2,7 +2,7 @@
   "name": "accepttc",
   "displayName": "AcceptTC",
   "description": "테스트 케이스 승인 게이트(AcceptTC)를 프로젝트에 설치하고, 테스트 케이스별 검증 상태와 과정을 VS Code 안에서 봅니다. 서버가 필요 없습니다.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "sontouf",
   "license": "MIT",
   "repository": {

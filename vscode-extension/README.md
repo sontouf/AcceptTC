@@ -32,7 +32,7 @@ AI 코딩 에이전트가 쓴 테스트 케이스가 명세에 근거해 정확�
 ## 확장 설치
 
 ```bash
-code --install-extension accepttc-0.3.0.vsix
+code --install-extension accepttc-0.4.0.vsix
 ```
 
 WSL 이나 원격 환경에서는 프로젝트가 있는 쪽(WSL/원격)에 설치하세요. `python3` 대신 다른 명령을 쓰려면 설정 `accepttc.python` 을 바꿉니다.

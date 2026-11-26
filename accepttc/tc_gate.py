@@ -8,6 +8,7 @@ deterministic half of that gate:
   check     mechanical checks on a test file and its trace record
   brief     everything the verifier needs for a test file, in one output
   evidence  what the agent session log shows about how the tests were written
+  plan      split the pending test cases over several verifiers that run in parallel
   record    store the verifier's verdicts (verifier subagent only)
   status    approval state of every test case
   dashboard write the web page that shows how each test case was verified
@@ -20,6 +21,7 @@ the `tc-verifier` subagent, see .claude/agents/tc-verifier.md.
 Only the Python standard library is used.
 """
 import argparse
+import contextlib
 import datetime
 import difflib
 import hashlib
@@ -68,6 +70,17 @@ FRAMEWORKS = {
         "head": r"^[ \t]*(?:static\s+)?void\s+(?P<a>test_?\w+)\s*\(\s*void\s*\)",
         "name": "{a}", "block": "brace",
         "assert": r"\bTEST_(?:ASSERT|FAIL)\w*\s*\(",
+        "globs": ["tests/**/*.c", "test/**/*.c"]},
+    "cunit": {
+        "head": r"^[ \t]*(?:static\s+)?void\s+(?P<a>[Tt]est\w*)\s*\(\s*(?:void)?\s*\)",
+        "name": "{a}", "block": "brace",
+        "assert": r"\bCU_(?:ASSERT|FAIL|PASS|TEST)\w*\s*\(",
+        "globs": ["tests/**/*.c", "test/**/*.c"]},
+    "cmocka": {
+        # a CMocka test takes `void **state`; setup and teardown return int
+        "head": r"^[ \t]*(?:static\s+)?void\s+(?P<a>\w+)\s*\(\s*void\s*\*\*\s*\w*\s*\)",
+        "name": "{a}", "block": "brace",
+        "assert": r"\b(?:assert_\w+|expect_\w+|fail|fail_msg|mock_assert)\s*\(",
         "globs": ["tests/**/*.c", "test/**/*.c"]},
     "pytest": {
         "head": r"^(?P<indent>[ \t]*)(?:async[ \t]+)?def[ \t]+(?P<a>test\w*)[ \t]*\(",
@@ -419,7 +432,30 @@ def load_trace(test_rel):
     cases = data.get("cases") if isinstance(data, dict) else None
     if not isinstance(cases, list):
         return [], '근거 기록은 "cases" 목록을 가진 객체여야 합니다'
-    return [c for c in cases if isinstance(c, dict)], None
+    cases = [c for c in cases if isinstance(c, dict)]
+    _expand_shared_sources(cases, data.get("sources"))
+    return cases, None
+
+
+def _expand_shared_sources(cases, pool):
+    """A trace file may define `sources` once at the top level.  A case that
+    cites one of those refs in an input or oracle entry gets that source added
+    to its own list, so every later step (checks, hash, brief, web page) sees
+    a complete case.  A case's own source with the same ref wins."""
+    if not isinstance(pool, list):
+        return
+    shared = {s.get("ref"): s for s in pool if isinstance(s, dict) and s.get("ref")}
+    for c in cases:
+        own = [s for s in c.get("sources") or [] if isinstance(s, dict)]
+        have = {s.get("ref") for s in own}
+        used = []
+        for field in ("inputs", "oracle"):
+            for it in c.get(field) or []:
+                for r in (it.get("sources") or []) if isinstance(it, dict) else []:
+                    if r in shared and r not in have and r not in used:
+                        used.append(r)
+        if used:
+            c["sources"] = own + [shared[r] for r in used]
 
 
 def case_hash(test, context, case):
@@ -725,6 +761,25 @@ def save_registry(reg):
     p.write_text(json.dumps(reg, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
 
 
+@contextlib.contextmanager
+def registry_lock():
+    """Serializes registry updates: several verifiers may record at once."""
+    path = ROOT / INBOX / ".lock"
+    try:
+        import fcntl
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fh = open(path, "w")
+    except (ImportError, OSError):
+        yield                              # no locking on this platform
+        return
+    try:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(fh, fcntl.LOCK_UN)
+        fh.close()
+
+
 def rejected_count(entry):
     return sum(1 for a in entry.get("attempts", []) if a["verdict"] == REJECTED)
 
@@ -871,16 +926,29 @@ def cmd_brief(args):
     out = []
     w = out.append
 
-    pending, skipped = [], []
+    wanted = list(getattr(args, "cases", None) or [])
+    pending, skipped, others = [], [], []
     for cid, c in res["cases"].items():
         st = case_status(reg["cases"].get(cid), c["hash"])
-        (skipped if st in (APPROVED, ESCALATED) else pending).append((cid, c, st))
+        if st in (APPROVED, ESCALATED):
+            skipped.append((cid, c, st))
+        elif wanted and cid not in wanted:
+            others.append(cid)             # another verifier's share of this file
+        else:
+            pending.append((cid, c, st))
+    vfile = verdict_file(test_rel, wanted)
     w("VERIFICATION BRIEF  %s" % test_rel)
-    w("language of findings: %s    verdict file: %s    then run: python3 %s/tc_gate.py record %s"
-      % (CFG["language"], verdict_file(test_rel), STATE_DIR, test_rel))
+    w("language of findings: %s    verdict file: %s    then run: python3 %s/tc_gate.py record %s%s"
+      % (CFG["language"], vfile, STATE_DIR, test_rel, " --verdicts " + vfile if wanted else ""))
     w("judge: %s" % (", ".join(cid for cid, _, _ in pending) or "(nothing pending)"))
     if skipped:
         w("skip:  %s" % ", ".join("%s (%s)" % (cid, st) for cid, _, st in skipped))
+    if others:
+        w("not yours (another verifier judges them at the same time; do not judge or record them): %s"
+          % ", ".join(others))
+    for cid in wanted:
+        if cid not in res["cases"]:
+            w("FILE ERROR: %s is not a test case of %s" % (cid, test_rel))
     for e in res["file_errors"]:
         w("FILE ERROR: " + e)
     if not pending or LOG["error"]:
@@ -1005,12 +1073,64 @@ def cmd_status(args):
     return 0
 
 
-def verdict_file(test_rel):
-    """Where the verifier writes the verdicts for a test file."""
-    return "%s/%s.json" % (INBOX, Path(test_rel).name)
+def verdict_file(test_rel, cases=None):
+    """Where the verifier writes the verdicts for a test file.  A verifier that
+    judges only some cases of the file gets a file of its own, so verifiers
+    working on the same test file at the same time do not overwrite each other."""
+    part = "." + re.sub(r"[^A-Za-z0-9_-]", "", str(cases[0])) if cases else ""
+    return "%s/%s%s.json" % (INBOX, Path(test_rel).name, part)
+
+
+MIN_CASES_PER_VERIFIER = 2
+
+
+def plan_jobs(rows, workers):
+    """Split the test cases that still need a verdict into verifier jobs.
+
+    One job is one test file, or part of one when there are fewer pending
+    files than workers.  Returns [(test_file, [case ids], whole_file)]."""
+    by_file = {}
+    for r in rows:
+        if r["status"] not in (APPROVED, ESCALATED):
+            by_file.setdefault(r["test_file"], []).append(r["id"])
+    jobs = [[f, ids, True] for f, ids in by_file.items()]
+    while jobs and len(jobs) < workers:
+        big = max(jobs, key=lambda j: len(j[1]))
+        if len(big[1]) < 2 * MIN_CASES_PER_VERIFIER:
+            break
+        half = (len(big[1]) + 1) // 2
+        jobs.insert(jobs.index(big) + 1, [big[0], big[1][half:], False])
+        big[1], big[2] = big[1][:half], False
+    return [tuple(j) for j in jobs]
+
+
+def cmd_plan(args):
+    """Tell the authoring agent which verifiers to start, and with what request."""
+    workers = max(1, args.workers)
+    jobs = plan_jobs(collect_status(), workers)
+    if not jobs:
+        print("VERIFICATION PLAN  nothing to verify: no test case is waiting for a verdict")
+        return 0
+    total = sum(len(ids) for _, ids, _ in jobs)
+    print("VERIFICATION PLAN  %d test case(s) to judge, %d %s subagent(s), at most %d at a time"
+          % (total, len(jobs), VERIFIER_AGENT, workers))
+    print("Run `check` on each file first and fix every FAIL. Then start the subagents of one "
+          "wave in a single message so they run in parallel. Use each line below as the whole "
+          "request of one subagent, with nothing added.")
+    for i in range(0, len(jobs), workers):
+        if len(jobs) > workers:
+            print("wave %d:" % (i // workers + 1))
+        for f, ids, whole in jobs[i:i + workers]:
+            print("  %s%s    (%d case(s))" % (f, "" if whole else " --cases " + " ".join(ids), len(ids)))
+    return 0
 
 
 def cmd_record(args):
+    with registry_lock():
+        return _record(args)
+
+
+def _record(args):
     """Store verifier verdicts.
 
     The verdicts are read from the verdict file the verifier wrote with the
@@ -1121,6 +1241,11 @@ def _report(cid, c, n, v, res, status):
 
 
 def cmd_human(args):
+    with registry_lock():
+        return _human(args)
+
+
+def _human(args):
     reg = load_registry()
     rows = {r["id"]: r for r in collect_status()}
     if args.id not in rows:
@@ -1233,6 +1358,172 @@ def attempt_diffs(attempts, body, trace):
 
 
 # --------------------------------------------------------------------------
+# traceability graph: specification <- test case -> production code
+# --------------------------------------------------------------------------
+# The link from a test case to production code is found by name: the functions
+# and classes a test body calls (directly, or through helpers and fixtures of
+# its own file) are matched against the definitions found in production files.
+# This is a static, name-based approximation, and the web page says so.
+CODE_EXTS = {".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".java", ".kt", ".js", ".jsx",
+             ".ts", ".tsx", ".mjs", ".go", ".py", ".cs", ".swift", ".rs"}
+MAX_CODE_FILES, MAX_CODE_BYTES = 3000, 400000
+_NOT_NAMES = set("""if for while switch return else catch do sizeof typeof new delete throw case
+    function func fn def fun with await yield in of and or not is lambda print assert elif except
+    raise defined alignof static_assert decltype super this self""".split())
+_C_LITERAL = re.compile(r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`",
+                        re.S)
+_PY_LITERAL = re.compile(r"#[^\n]*|\"\"\".*?\"\"\"|'''.*?'''|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'",
+                         re.S)
+_CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
+_IDENT_RE = re.compile(r"\b[A-Za-z_]\w*\b")
+_TYPE_RE = re.compile(r"\b(?:class|struct|interface|enum|trait|object)\s+([A-Za-z_]\w*)[^;{()=]*\{")
+_ARROW_RE = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*(?:async\s*)?"
+                       r"(?:function\b[^{]*|\([^()]*\)\s*=>\s*|[A-Za-z_]\w*\s*=>\s*)\{")
+_PY_DEF_RE = re.compile(r"^([ \t]*)(?:async[ \t]+)?(?:def|class)[ \t]+([A-Za-z_]\w*)", re.M)
+# what may stand between a parameter list and the body of a definition
+_QUALIFIER = re.compile(r"(?:const|noexcept|override|final)\b|throws\s+[\w.]+(?:\s*,\s*[\w.]+)*"
+                        r"|->\s*[\w:<>\[\]*&?.]+|:\s*[A-Za-z_][\w.<>\[\]?]*"
+                        r"|\([^(){};]*\)|[A-Za-z_*\[][\w.*\[\]]*")
+_FIXTURE_RE = re.compile(r"(?i)^(?:set_?up|tear_?down|(?:before|after)(?:_?(?:each|all|class))?)\w*$")
+_WS = re.compile(r"\s*")
+
+
+def _blank(text, python=False):
+    """`text` with comments and string literals replaced by spaces.  Offsets
+    and line numbers stay the same."""
+    return (_PY_LITERAL if python else _C_LITERAL).sub(
+        lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
+
+
+def _body_open(text, pos):
+    """Index of the `{` that opens a body right after a parameter list ending
+    at `pos`, allowing a few qualifiers or a return type in between."""
+    for _ in range(6):
+        pos = _WS.match(text, pos).end()
+        if text[pos:pos + 1] == "{":
+            return pos
+        q = _QUALIFIER.match(text, pos)
+        if not q or q.end() == pos:
+            return None
+        pos = q.end()
+    return None
+
+
+def _definitions(text, python=False):
+    """[(name, line, start, end)] of the functions and types defined in
+    `text` (already passed through _blank).  start..end spans the definition."""
+    out = []
+    if python:
+        for m in _PY_DEF_RE.finditer(text):
+            indent = len(m.group(1).expandtabs(4))
+            end = text.find("\n", m.end())
+            end = len(text) if end < 0 else end + 1
+            last = end
+            while end < len(text):
+                nxt = text.find("\n", end)
+                nxt = len(text) if nxt < 0 else nxt + 1
+                line = text[end:nxt]
+                if line.strip():
+                    if len(line[:len(line) - len(line.lstrip())].expandtabs(4)) <= indent:
+                        break
+                    last = nxt
+                end = nxt
+            out.append((m.group(2), text.count("\n", 0, m.start()) + 1, m.start(), last))
+        return out
+    for m in _CALL_RE.finditer(text):
+        name = m.group(1)
+        before = text[:m.start()].rstrip()[-3:]
+        if name in _NOT_NAMES or before.endswith((".", "->")) or before.endswith("new"):
+            continue
+        close = _match(text, m.end() - 1, "(", ")")
+        brace = _body_open(text, close) if close else None
+        end = _match(text, brace, "{", "}") if brace is not None else None
+        if end:
+            out.append((name, text.count("\n", 0, m.start()) + 1, m.start(), end))
+    for rx in (_TYPE_RE, _ARROW_RE):
+        for m in rx.finditer(text):
+            end = _match(text, m.end() - 1, "{", "}")
+            if end:
+                out.append((m.group(1), text.count("\n", 0, m.start()) + 1, m.start(), end))
+    return out
+
+
+def all_prod_files():
+    """Source files matching production_globs."""
+    out = []
+    for dirpath, dirs, files in os.walk(ROOT):
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
+        for name in sorted(files):
+            p = Path(dirpath) / name
+            relp = p.relative_to(ROOT).as_posix()
+            if p.suffix.lower() in CODE_EXTS and is_prod(relp):
+                out.append(relp)
+                if len(out) >= MAX_CODE_FILES:
+                    return out
+    return out
+
+
+MAX_TREE_FILES = 4000
+
+
+def project_files():
+    """Repo-relative paths of the project's files, for the settings tab to
+    show which files a glob matches while the human edits it."""
+    out = []
+    for dirpath, dirs, files in os.walk(ROOT):
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
+        for name in sorted(files):
+            out.append((Path(dirpath) / name).relative_to(ROOT).as_posix())
+            if len(out) >= MAX_TREE_FILES:
+                return out
+    return out
+
+
+def trace_graph(results):
+    """Production files with their definitions, and for every test case the
+    definitions it reaches by name.  `results` maps test file -> check_file()."""
+    code, index = [], {}
+    for f in all_prod_files():
+        try:
+            if (ROOT / f).stat().st_size > MAX_CODE_BYTES:
+                raise OSError
+            text = (ROOT / f).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            code.append({"file": f, "symbols": [], "skipped": True})
+            continue
+        python = f.endswith(".py")
+        symbols, seen = [], set()
+        for name, line, _, _ in sorted(_definitions(_blank(text, python), python), key=lambda d: d[1]):
+            if name not in seen:
+                seen.add(name)
+                symbols.append({"name": name, "line": line})
+                index.setdefault(name, []).append(len(code))
+        code.append({"file": f, "symbols": symbols})
+    calls = {}
+    for tf, res in results.items():
+        python = tf.endswith(".py")
+        context = _blank(res.get("context") or "", python)
+        helpers = {}
+        for name, _, start, end in _definitions(context, python):
+            helpers.setdefault(name, context[start:end])
+        fixtures = [body for name, body in helpers.items() if _FIXTURE_RE.match(name)]
+        for cid, c in res["cases"].items():
+            texts, queue, seen = [], [_blank(c["body"], python)] + fixtures, set()
+            while queue:
+                text = queue.pop()
+                texts.append(text)
+                for ident in set(_IDENT_RE.findall(text)):
+                    if ident in helpers and ident not in seen:
+                        seen.add(ident)
+                        queue.append(helpers[ident])
+            called = set()
+            for text in texts:
+                called.update(_CALL_RE.findall(text))
+            calls[cid] = sorted([i, name] for name in called - _NOT_NAMES for i in index.get(name, []))
+    return {"code": code, "calls": calls}
+
+
+# --------------------------------------------------------------------------
 # dashboard
 # --------------------------------------------------------------------------
 def dashboard_data(events=None):
@@ -1240,12 +1531,13 @@ def dashboard_data(events=None):
         events = load_events()
     log_error = LOG["error"]
     reg = load_registry()
-    cases, cover, files = [], {}, {}
+    cases, cover, files, results = [], {}, {}, {}
     for f in CFG["coverage_files"]:
         if (ROOT / f).is_file():
             cover[f] = {}
     for tf in all_test_files():
         res = check_file(tf, events)
+        results[tf] = res
         rows = timeline(tf, events, cited_files(tf))
         files[tf] = git_history([tf, trace_path(tf)])
         for cid, c in res["cases"].items():
@@ -1290,10 +1582,14 @@ def dashboard_data(events=None):
                        for cid in sorted(set(cover[f].get(i + 1, [])))]}
             for i, t in enumerate(lines) if t.strip()]})
     return {"generated": now(), "max_attempts": MAX_ATTEMPTS, "cases": cases, "coverage": coverage,
-            "files": files, "code": git_history(CODE_PATHS),
+            "files": files, "code": git_history(CODE_PATHS), "graph": trace_graph(results),
             "prod_re": _PROD_RE.pattern, "test_re": _TEST_RE.pattern,
-            "config": {k: CFG[k] for k in ("framework", "test_globs", "spec_globs",
-                                           "production_globs", "language")},
+            "assert_re": CFG["fw"]["assert"],
+            "config": {k: CFG[k] for k in ("framework", "test_globs", "spec_globs", "production_globs",
+                                           "coverage_files", "language", "max_attempts")},
+            # for the settings tab: what can be chosen, and the files a glob can match
+            "frameworks": {k: {"globs": v["globs"]} for k, v in FRAMEWORKS.items()},
+            "config_file": CONFIG_FILE, "config_error": CONFIG_ERROR, "tree": project_files(),
             "log": {"source": LOG["source"], "sessions": LOG["sessions"], "error": log_error},
             "locked": (not cases) or any(c["status"] != APPROVED for c in cases)}
 
@@ -1451,10 +1747,17 @@ def main(argv=None):
         p.add_argument("test_file")
         if name == "check":
             p.add_argument("--json", action="store_true")
+        if name == "brief":
+            p.add_argument("--cases", nargs="+", metavar="ID",
+                           help="judge only these test cases (another verifier takes the rest)")
         if name == "record":
             p.add_argument("--verdicts", help="verdict JSON file, or - for stdin "
                                               "(default: the verifier's verdict file)")
         p.set_defaults(fn=fn)
+    p = sub.add_parser("plan", help="which verifiers to start in parallel")
+    p.add_argument("--workers", type=int, default=4,
+                   help="verifiers running at the same time (default 4)")
+    p.set_defaults(fn=cmd_plan)
     p = sub.add_parser("status", help="approval state of every test case")
     p.add_argument("--json", action="store_true")
     p.set_defaults(fn=cmd_status)

@@ -224,6 +224,7 @@ async function openDashboard(selectId) {
       if (!msg) return;
       if (msg.ready && pendingSelect && panel) { panel.webview.postMessage({ select: pendingSelect }); pendingSelect = null; }
       if (typeof msg.open === "string") openFile(msg.open, msg.line);
+      if (msg.saveConfig && typeof msg.saveConfig === "object") saveConfig(msg.saveConfig);
     });
     await regenerate(root);
     showPage(root);
@@ -231,6 +232,63 @@ async function openDashboard(selectId) {
     panel.reveal(undefined, true);
     if (pendingSelect) { panel.webview.postMessage({ select: pendingSelect }); pendingSelect = null; }
   }
+}
+
+// ------------------------------------------------------------------ settings
+// The settings tab of the verification page sends the configuration the human
+// chose.  Agents cannot change .accepttc/config.json (the hook refuses), so this
+// write happens here, after the human confirms it.
+const CONFIG_LISTS = ["test_globs", "production_globs", "spec_globs", "coverage_files"];
+
+function cleanConfig(cfg) {
+  const out = {};
+  if (typeof cfg.framework !== "string" || !/^[a-z][a-z0-9_]*$/.test(cfg.framework)) return null;
+  out.framework = cfg.framework;
+  for (const key of CONFIG_LISTS) {
+    if (cfg[key] === undefined) continue;
+    if (!Array.isArray(cfg[key]) || !cfg[key].every((x) => typeof x === "string" && x.length < 300 && !x.includes("\n"))) return null;
+    out[key] = cfg[key].map((x) => x.trim()).filter(Boolean);
+  }
+  if (!out.production_globs || !out.production_globs.length) return null;   // nothing locked: not a usable gate
+  if (cfg.language !== undefined) {
+    if (!["ko", "en", "any"].includes(cfg.language)) return null;
+    out.language = cfg.language;
+  }
+  if (cfg.max_attempts !== undefined) {
+    const n = parseInt(cfg.max_attempts, 10);
+    if (!(n >= 1 && n <= 9)) return null;
+    out.max_attempts = n;
+  }
+  return out;
+}
+
+async function saveConfig(cfg) {
+  const root = model.root;
+  const reply = (ok, error) => { if (panel) panel.webview.postMessage({ configSaved: ok, error }); };
+  if (!root) return reply(false, "AcceptTC 프로젝트를 찾지 못했습니다");
+  const clean = cleanConfig(cfg);
+  if (!clean) return reply(false, "설정 값이 올바르지 않습니다 (구현 코드 위치는 하나 이상 있어야 합니다)");
+  const file = path.join(root, ".accepttc", "config.json");
+  let old = {};
+  try { old = JSON.parse(fs.readFileSync(file, "utf8")); } catch (e) { /* no usable file yet */ }
+  const confirm = "저장";
+  const answer = await vscode.window.showWarningMessage(
+    `AcceptTC 설정을 저장합니다.\n\n프레임워크: ${old.framework || "(없음)"} → ${clean.framework}\n` +
+    `테스트 위치: ${clean.test_globs ? clean.test_globs.join(", ") : "프레임워크 기본값"}\n` +
+    `구현 코드 위치: ${clean.production_globs.join(", ")}\n\n` +
+    "프레임워크나 위치가 바뀌면 테스트 케이스를 다시 찾습니다.", { modal: true }, confirm);
+  if (answer !== confirm) return reply(false, "취소됨");
+  const next = Object.assign({}, typeof old === "object" && old ? old : {}, clean);
+  if (clean.test_globs === undefined) delete next.test_globs;      // back to the framework's default
+  try {
+    fs.writeFileSync(file, JSON.stringify(next, null, 2) + "\n", "utf8");
+  } catch (e) {
+    return reply(false, String(e && e.message || e));
+  }
+  reply(true);
+  await reload();
+  await regenerate(root);
+  showPage(root);
 }
 
 /** Something changed on disk: refresh the views, debounced. */
@@ -280,14 +338,16 @@ async function runInstaller(extraArgs, title, question, confirmLabel) {
   if (!extraArgs.includes("--uninstall") && !fs.existsSync(path.join(folder, ".accepttc", "config.json"))) {
     // A new project often has no tests yet, so the framework cannot always be detected.
     const pick = await vscode.window.showQuickPick([
-      { label: "자동 판별", description: "프로젝트 파일을 보고 고릅니다 (판별할 파일이 없으면 GoogleTest)", value: "" },
-      { label: "GoogleTest", description: "C/C++", value: "gtest" },
+      { label: "GoogleTest", description: "기본값 · C/C++", value: "gtest" },
+      { label: "CUnit", description: "C", value: "cunit" },
+      { label: "JUnit", description: "Java, Kotlin", value: "junit" },
+      { label: "CMocka", description: "C", value: "cmocka" },
       { label: "Unity", description: "C", value: "unity" },
       { label: "pytest", description: "Python (unittest 형식 포함)", value: "pytest" },
-      { label: "JUnit", description: "Java, Kotlin", value: "junit" },
       { label: "Jest / Vitest / Mocha", description: "JavaScript, TypeScript", value: "jest" },
       { label: "Go testing", description: "Go", value: "go" },
-    ], { placeHolder: "이 프로젝트의 테스트 프레임워크" });
+      { label: "자동 판별", description: "프로젝트의 기존 테스트 파일을 보고 고릅니다 (판별할 파일이 없으면 GoogleTest)", value: "" },
+    ], { placeHolder: "이 프로젝트의 테스트 프레임워크 (나중에 검증 현황의 설정 탭에서 바꿀 수 있습니다)" });
     if (!pick) return;
     if (pick.value) extraArgs = [...extraArgs, "--framework", pick.value];
   }
@@ -350,4 +410,4 @@ function activate(ctx) {
 
 function deactivate() { clearTimeout(timer); }
 
-module.exports = { activate, deactivate, _test: { tree, lenses, getModel: () => model } };
+module.exports = { activate, deactivate, _test: { tree, lenses, cleanConfig, getModel: () => model } };

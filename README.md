@@ -34,7 +34,7 @@ Linux(WSL 포함)에서 다음이 필요합니다. 없으면 설치 스크립트
 
 **VS Code 확장으로** (확장 하나만 있으면 됩니다)
 
-1. [`vscode-extension/accepttc-0.3.0.vsix`](vscode-extension/accepttc-0.3.0.vsix)를 받아 설치합니다: `code --install-extension accepttc-0.3.0.vsix`
+1. [`vscode-extension/accepttc-0.4.0.vsix`](vscode-extension/accepttc-0.4.0.vsix)를 받아 설치합니다: `code --install-extension accepttc-0.4.0.vsix`
 2. 프로젝트 폴더를 열고 명령 팔레트(Ctrl+Shift+P)에서 `AcceptTC: 이 프로젝트에 설치`를 실행합니다.
 
 **한 줄로**
@@ -69,7 +69,7 @@ cd AcceptTC
 
 | 옵션 | 뜻 |
 |---|---|
-| `--framework 이름` | `gtest`, `unity`, `pytest`, `junit`, `jest`, `go` 중 하나로 지정 |
+| `--framework 이름` | `gtest`(기본), `cunit`, `junit`, `cmocka`, `unity`, `pytest`, `jest`, `go` 중 하나로 지정. 나중에 설정 탭에서 바꿀 수 있습니다 |
 | `--lang ko\|en\|any` | 근거 기록과 검증 판단을 쓸 언어 (기본 `ko`) |
 | `--vscode` | VS Code 확장도 설치 |
 | `--no-permissions` | 게이트 명령을 미리 허용하지 않음 |
@@ -90,7 +90,10 @@ cd AcceptTC
 ### 검증 과정 보기
 
 - **브라우저**: `.accepttc/verification/index.html`을 엽니다. HTML 파일 하나라서 서버가 필요 없습니다.
-- **VS Code**: 확장을 설치하면 왼쪽 활동 표시줄에 AcceptTC 아이콘이 생깁니다. 확장은 `code --install-extension vscode-extension/accepttc-0.3.0.vsix` 또는 `./install.sh --vscode`로 설치합니다.
+  - **추적 그래프** (첫 화면): 명세, 테스트 케이스, 구현 코드를 점으로, 근거와 호출 관계를 선으로 보여줍니다. 점을 누르면 연결된 것만 남고 옆에 내용이 나옵니다. 테스트 케이스가 인용하지 않은 요구사항 줄과, 어떤 테스트도 호출하지 않는 구현 파일은 점선으로 표시됩니다. 명세는 줄 단위/파일 단위, 구현은 함수 단위/파일 단위로 바꿔 볼 수 있습니다.
+  - **테스트 케이스 / 요구사항 커버리지 / 코드 변경**: 테스트 케이스별 검증 과정, 명세 줄별 인용 현황, git 변경 이력.
+  - **설정**: 테스트 프레임워크와 폴더 구조(테스트, 구현 코드, 명세 위치)를 고릅니다. 위치를 고치는 동안 그 패턴에 맞는 파일 수가 바로 표시됩니다. VS Code 확장 안에서는 저장 버튼으로 바로 반영되고, 브라우저에서는 `config.json`을 내려받아 `.accepttc/`에 넣습니다.
+- **VS Code**: 확장을 설치하면 왼쪽 활동 표시줄에 AcceptTC 아이콘이 생깁니다. 확장은 `code --install-extension vscode-extension/accepttc-0.4.0.vsix` 또는 `./install.sh --vscode`로 설치합니다.
   - **사이드바 목록**: 구현 코드가 잠겼는지와, 테스트 케이스를 상태별(거부, 미검증, 승인 등)로 보여줍니다. 테스트 케이스를 펼치면 테스트 코드, 인용한 명세 줄, 검증 회차별 보고서로 바로 갈 수 있습니다.
   - **코드 위 표시**: 테스트 파일을 열면 각 테스트 케이스 위에 `✓ TC-XXX-001 · 승인`처럼 상태가 나오고, 누르면 그 테스트 케이스의 검증 과정이 열립니다.
   - **상태 표시줄**: `TC 승인 수/전체 수`.
@@ -113,7 +116,7 @@ python3 .accepttc/tc_gate.py reset TC-CTRL-001                                  
 
 ## 설정
 
-`.accepttc/config.json`은 사람이 고칩니다 (에이전트의 수정은 훅이 막습니다).
+`.accepttc/config.json`은 사람이 고칩니다 (에이전트의 수정은 훅이 막습니다). 검증 현황의 **설정** 탭에서 고르거나 파일을 직접 고칩니다.
 
 ```json
 {
@@ -139,6 +142,8 @@ python3 .accepttc/tc_gate.py reset TC-CTRL-001                                  
 | `framework` | 테스트 케이스 하나의 단위 | 기본 테스트 위치 |
 |---|---|---|
 | `gtest` | `TEST`, `TEST_F`, `TEST_P` 블록 | `tests/**/*.cpp`, `test/**/*.cpp` |
+| `cunit` | `void test_xxx(void)` 함수 (`CU_ASSERT...`) | `tests/**/*.c`, `test/**/*.c` |
+| `cmocka` | `void xxx(void **state)` 함수 (`assert_...`) | `tests/**/*.c`, `test/**/*.c` |
 | `unity` | `void test_xxx(void)` 함수 | `tests/**/*.c`, `test/**/*.c` |
 | `pytest` | `def test_xxx` 함수 (데코레이터 포함) | `tests/**/test_*.py` |
 | `junit` | `@Test` 메서드 (Java, Kotlin) | `src/test/**/*.java`, `*.kt` |
@@ -148,7 +153,11 @@ python3 .accepttc/tc_gate.py reset TC-CTRL-001                                  
 
 ## 토큰과 속도
 
-검증은 테스트 파일 단위로 한 번 돌고, 이미 승인된 테스트 케이스는 건너뜁니다. 검증 에이전트는 파일을 하나씩 읽는 대신 `tc_gate.py brief` 한 번으로 필요한 것을 받습니다. 여기에는 Entire 로그에서 뽑은 작성 과정, 인용된 명세 원문, 테스트 코드와 근거 기록, 이전 판정과 그 뒤의 변경이 들어 있습니다. 기계 검사, 상태 확인, 검증 현황 페이지 생성은 모델을 쓰지 않습니다.
+검증은 여러 검증 에이전트가 나눠서 동시에 합니다. 작성 에이전트는 테스트를 한 묶음 써 놓고 `python3 .accepttc/tc_gate.py plan`을 실행합니다. 이 명령이 판정이 필요한 테스트 케이스를 최대 4몫으로 나눠 주고(테스트 파일 단위, 파일 수가 적으면 한 파일을 나눔), 작성 에이전트는 그 수만큼 `tc-verifier`를 한 번에 띄웁니다. 동시에 띄울 수는 `plan --workers N`으로 바꿉니다. 같은 파일을 나눠 맡은 검증 에이전트들은 판정 파일을 따로 쓰고, 기록은 잠금으로 직렬화되어 서로 덮어쓰지 않습니다.
+
+근거 기록도 짧게 쓸 수 있습니다. 여러 테스트 케이스가 함께 인용하는 명세 문장은 근거 기록 파일 맨 위의 `sources`에 한 번만 쓰고, 각 테스트 케이스는 그 `ref`만 적습니다.
+
+이미 승인된 테스트 케이스는 건너뜁니다. 검증 에이전트는 파일을 하나씩 읽는 대신 `tc_gate.py brief` 한 번으로 필요한 것을 받습니다. 여기에는 Entire 로그에서 뽑은 작성 과정, 인용된 명세 원문, 테스트 코드와 근거 기록, 이전 판정과 그 뒤의 변경이 들어 있습니다. 기계 검사, 상태 확인, 검증 현황 페이지 생성은 모델을 쓰지 않습니다.
 
 테스트 케이스 1개짜리 파일로 잰 검증 에이전트 1회 실행 결과입니다 (한 번씩 잰 값이라 참고용입니다).
 

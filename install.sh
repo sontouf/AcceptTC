@@ -31,7 +31,7 @@ AcceptTC 설치 스크립트 (Linux)
   ./install.sh [옵션] [프로젝트_폴더]      프로젝트_폴더를 생략하면 현재 폴더에 설치합니다.
 
 옵션:
-  --framework 이름     테스트 프레임워크: gtest, unity, pytest, junit, jest, go
+  --framework 이름     테스트 프레임워크: gtest(기본), cunit, cmocka, unity, junit, pytest, jest, go
                        (생략하면 프로젝트를 보고 자동으로 고릅니다)
   --lang ko|en|any     근거 기록과 검증 판단을 쓸 언어 (기본 ko)
   --force-config       기존 .accepttc/config.json 을 새로 만듭니다
@@ -74,8 +74,8 @@ while [ $# -gt 0 ]; do
   shift
 done
 case "$LANG_OPT" in ko|en|any) ;; *) die "--lang 은 ko, en, any 중 하나여야 합니다." ;; esac
-case "$FRAMEWORK" in ""|gtest|unity|pytest|junit|jest|go) ;;
-  *) die "지원하지 않는 프레임워크: $FRAMEWORK (gtest, unity, pytest, junit, jest, go)" ;; esac
+case "$FRAMEWORK" in ""|gtest|cunit|cmocka|unity|pytest|junit|jest|go) ;;
+  *) die "지원하지 않는 프레임워크: $FRAMEWORK (gtest, cunit, cmocka, unity, junit, pytest, jest, go)" ;; esac
 
 # ---------------------------------------------------------------- prerequisites
 pkg_hint() {   # install command for package $1 on this distribution

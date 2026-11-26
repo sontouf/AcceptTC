@@ -1,17 +1,19 @@
 {
   "test_file": "tests/door_test.cpp",
+  "sources": [
+    {
+      "ref": "REQ-CYCLE",
+      "file": "docs/requirements.md",
+      "lines": "11",
+      "quote": "The controller has an internal tick. A door cycle lasts 3 ticks."
+    }
+  ],
   "cases": [
     {
       "id": "TC-DOOR-001",
       "test": "DoorTest.CycleLastsThreeTicks",
       "objective": "열림 버튼을 누르면 문 동작 주기가 정확히 3틱 동안 이어진다.",
       "sources": [
-        {
-          "ref": "S1",
-          "file": "docs/requirements.md",
-          "lines": "11",
-          "quote": "The controller has an internal tick. A door cycle lasts 3 ticks."
-        },
         {
           "ref": "S2",
           "file": "docs/requirements.md",
@@ -33,7 +35,7 @@
           "assertion": "EXPECT_EQ(state, DOOR_CYCLE_INNER) on ticks 1, 2 and 3",
           "derivation": "S2에 따라 안쪽 버튼이 우선하고, S1에 따라 주기는 3틱 동안 이어진다.",
           "sources": [
-            "S1",
+            "REQ-CYCLE",
             "S2"
           ]
         },
@@ -41,7 +43,7 @@
           "assertion": "EXPECT_EQ(state, DOOR_CLOSED) on tick 4",
           "derivation": "S1: 주기는 3틱이면 끝나므로 4번째 틱에는 더 이상 주기 중이 아니다.",
           "sources": [
-            "S1"
+            "REQ-CYCLE"
           ]
         }
       ],

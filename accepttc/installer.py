@@ -84,10 +84,15 @@ def detect(project):
                        if re.fullmatch(r"[^/]+/__init__\.py", f) and not f.startswith("test")})
         fw = "pytest"
         prod = ["src/**"] if has(r"^src/") else [p + "/**" for p in pkgs] or ["src/**"]
-    elif any("unity.h" in read(project, f) for f in files if re.search(r"^tests?/.*\.c$", f)):
-        fw, prod = "unity", ["src/**"]
     else:
+        # C and C++: look at what the existing tests include.  GoogleTest is the
+        # default when there is nothing to go by.
+        c_tests = "\n".join(read(project, f) for f in files if re.search(r"^tests?/.*\.c$", f))
         fw, prod = "gtest", ["src/**"]
+        for name, header in (("unity", "unity.h"), ("cmocka", "cmocka.h"), ("cunit", "CUnit/")):
+            if re.search(r'#\s*include\s*[<"]' + re.escape(header), c_tests):
+                fw = name
+                break
 
     coverage = [f for f in files
                 if f.split("/", 1)[0] in ("docs", "doc", "spec", "specs", "requirements")

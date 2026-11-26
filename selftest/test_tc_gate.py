@@ -422,7 +422,7 @@ class GateTest(unittest.TestCase):
         r = run()
         self.assertEqual(r.returncode, 2)
         self.assertIn(".accepttc/inbox/controller_test.cpp.json", r.stderr)
-        inbox.parent.mkdir(parents=True)
+        inbox.parent.mkdir(parents=True, exist_ok=True)
         inbox.write_text(json.dumps({"verdicts": [{"id": "TC-CTRL-001", "verdict": "APPROVED", "findings": KO}]}))
         r = run()
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -520,6 +520,142 @@ class GateTest(unittest.TestCase):
         self.assertIsNone(self.hook("Bash", {"command": "cat .accepttc/registry.json"}))
         self.assertIsNone(self.hook("Bash", {
             "command": "python3 - <<'E'\nprint('.accepttc/verification') if 2 > 1 else None\nE"}))
+
+    # -- parallel verification ----------------------------------------------
+    def many_cases(self, n):
+        """A test file with n test cases and its trace record."""
+        body = "#include <gtest/gtest.h>\n" + "".join(
+            "TEST(Door, Case%d) {\n  EXPECT_EQ(door_ticks(), 3);\n}\n\n" % i for i in range(n))
+        (self.root / "tests/door_test.cpp").write_text(body)
+        cases = []
+        for i in range(n):
+            c = case("TC-DOOR-%03d" % (i + 1), "Door.Case%d" % i, 3, "A door cycle lasts 3 ticks.")
+            c["oracle"] = c["oracle"][:1]
+            cases.append(c)
+        (self.root / "tests/door_test.trace.json").write_text(
+            json.dumps({"test_file": "tests/door_test.cpp", "cases": cases}))
+        self.tool("Read", {"file_path": self.p("docs/req.md")})
+        self.tool("Write", {"file_path": self.p("tests/door_test.cpp")})
+        self.tool("Write", {"file_path": self.p("tests/controller_test.cpp")})
+
+    def test_plan_splits_pending_cases_over_verifiers(self):
+        self.many_cases(8)
+        code, out, _ = self.run_gate("plan")
+        self.assertEqual(code, 0)
+        jobs = [l.strip() for l in out.splitlines() if l.startswith("  tests/")]
+        self.assertEqual(len(jobs), 4, out)                     # two files, split up to 4 verifiers
+        ids = " ".join(jobs)
+        for i in range(1, 9):
+            self.assertEqual(ids.count("TC-DOOR-%03d" % i), 1, out)   # every case in exactly one job
+        self.assertTrue(any(j.startswith("tests/controller_test.cpp ") and "--cases" not in j for j in jobs), out)
+        _, out, _ = self.run_gate("plan", "--workers", "1")
+        self.assertIn("wave 2", out)
+        self.assertNotIn("--cases", out)
+
+    def test_verifiers_sharing_a_file_record_separately(self):
+        self.many_cases(4)
+        code, out, _ = self.run_gate("brief", "tests/door_test.cpp", "--cases", "TC-DOOR-001", "TC-DOOR-002")
+        self.assertEqual(code, 0, out)
+        head = out.splitlines()
+        self.assertIn(".accepttc/inbox/door_test.cpp.TC-DOOR-001.json", head[1])
+        self.assertIn("--verdicts .accepttc/inbox/door_test.cpp.TC-DOOR-001.json", head[1])
+        self.assertEqual(head[2], "judge: TC-DOOR-001, TC-DOOR-002")
+        self.assertIn("not yours", out)
+        self.assertIn("== TC-DOOR-002", out)
+        self.assertNotIn("== TC-DOOR-003", out)
+        # two verifiers record their shares at the same moment: no verdict is lost
+        inbox = self.root / ".accepttc/inbox"
+        inbox.mkdir(parents=True, exist_ok=True)
+        env = dict(os.environ, TC_GATE_ROOT=str(self.root), TC_GATE_TRANSCRIPT_DIR=str(self.logs))
+        procs = []
+        for share in (["TC-DOOR-001", "TC-DOOR-002"], ["TC-DOOR-003", "TC-DOOR-004"]):
+            f = inbox / ("door_test.cpp.%s.json" % share[0])
+            f.write_text(json.dumps({"verdicts": [{"id": i, "verdict": "APPROVED", "findings": KO} for i in share]}))
+            procs.append(subprocess.Popen(
+                [sys.executable, str(SCRIPT), "record", "tests/door_test.cpp", "--verdicts",
+                 str(f.relative_to(self.root))], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE))
+        for p in procs:
+            p.communicate()
+            self.assertEqual(p.returncode, 0)
+        st = self.status()
+        self.assertEqual([st["TC-DOOR-%03d" % i] for i in range(1, 5)], ["APPROVED"] * 4)
+        self.assertEqual(list(inbox.glob("*.json")), [])
+        _, out, _ = self.run_gate("plan")
+        self.assertNotIn("door_test", out)                      # nothing left to judge there
+
+    def test_shared_sources_are_written_once(self):
+        self.honest_session()
+        c1 = case("TC-CTRL-001", "ControllerTest.TurnLastsThreeTicks", 3, "x")
+        c2 = case("TC-CTRL-002", "ControllerTest.LeftHasPriority", 4, "x")
+        for c in (c1, c2):
+            c["sources"] = []
+            for it in c["inputs"] + c["oracle"]:
+                it["sources"] = ["CYCLE"]
+        c2["oracle"][0]["sources"] = ["CYCLE", "PRIO"]
+        shared = [{"ref": "CYCLE", "file": "docs/req.md", "lines": "3", "quote": "A door cycle lasts 3 ticks."},
+                  {"ref": "PRIO", "file": "docs/req.md", "lines": "4", "quote": "the inner button has priority"}]
+        path = self.root / "tests/controller_test.trace.json"
+        path.write_text(json.dumps({"test_file": "tests/controller_test.cpp", "sources": shared, "cases": [c1, c2]}))
+        _, res = self.check()
+        self.assertEqual(res["cases"]["TC-CTRL-001"]["fails"], [])
+        self.assertEqual([s["ref"] for s in res["cases"]["TC-CTRL-001"]["trace"]["sources"]], ["CYCLE"])
+        self.assertEqual([s["ref"] for s in res["cases"]["TC-CTRL-002"]["trace"]["sources"]], ["CYCLE", "PRIO"])
+        before = {k: v["hash"] for k, v in res["cases"].items()}
+        # changing a shared source changes only the cases that use it
+        shared[1]["quote"] = "If both the inner and the outer button are pressed, the inner button has priority."
+        path.write_text(json.dumps({"test_file": "tests/controller_test.cpp", "sources": shared, "cases": [c1, c2]}))
+        _, res = self.check()
+        self.assertEqual(res["cases"]["TC-CTRL-001"]["hash"], before["TC-CTRL-001"])
+        self.assertNotEqual(res["cases"]["TC-CTRL-002"]["hash"], before["TC-CTRL-002"])
+        # a ref that is defined nowhere is still an error
+        c1["oracle"][0]["sources"] = ["NOPE"]
+        path.write_text(json.dumps({"test_file": "tests/controller_test.cpp", "sources": shared, "cases": [c1, c2]}))
+        _, res = self.check()
+        self.assertTrue(any("BAD_REF" in f for f in res["cases"]["TC-CTRL-001"]["fails"]))
+
+    # -- more frameworks ----------------------------------------------------
+    def test_cunit_and_cmocka_cases(self):
+        names, _ = self.parse("cunit", "tests/test_door.c", (
+            "#include <CUnit/CUnit.h>\nstatic int init_suite(void) { return 0; }\n"
+            "void test_cycle(void)\n{\n    CU_ASSERT_EQUAL(door_ticks(), 3);\n    CU_ASSERT(door_closed());\n}\n"
+            "static void testPriority(void) { CU_ASSERT_TRUE(inner_first()); }\n"
+            "int main(void) { CU_add_test(s, \"cycle\", test_cycle); return 0; }\n"))
+        self.assertEqual(names, {"test_cycle": 2, "testPriority": 1})
+        names, _ = self.parse("cmocka", "tests/test_door.c", (
+            "#include <cmocka.h>\nstatic int setup(void **state) { return 0; }\n"
+            "static void cycle_lasts_three_ticks(void **state)\n{\n    (void)state;\n"
+            "    assert_int_equal(door_ticks(), 3);\n    assert_true(door_closed());\n}\n"
+            "static void helper(int x) { (void)x; }\n"
+            "int main(void) { const struct CMUnitTest t[] = { cmocka_unit_test(cycle_lasts_three_ticks) };\n"
+            "  return cmocka_run_group_tests(t, setup, NULL); }\n"))
+        self.assertEqual(names, {"cycle_lasts_three_ticks": 2})
+
+    # -- traceability graph -------------------------------------------------
+    def test_graph_links_tests_to_the_code_they_call(self):
+        self.honest_session()
+        (self.root / "src/controller.c").write_text(
+            "#include \"controller.h\"\n/* not_a_function(void) { } */\n"
+            "static int clamp(int v) { return v < 0 ? 0 : v; }\n"
+            "void rvc_init(rvc_t *c)\n{\n    c->n = clamp(0);\n}\n"
+            "void rvc_front(rvc_t *c, bool on) { c->front = on; }\n"
+            "dir_t rvc_tick(rvc_t *c) {\n    if (c->front) { return DIR_TURN_LEFT; }\n    return DIR_FORWARD;\n}\n")
+        (self.root / "src/unused.c").write_text("int spare(void) { return 1; }\n")
+        (self.root / "src/notes.md").write_text("rvc_tick(c) { not code }\n")
+        self.assertEqual(self.run_gate("dashboard")[0], 0)
+        html = (self.root / ".accepttc/verification/index.html").read_text()
+        data = json.loads(html.split('<script id="data" type="application/json">')[1].split("</script>")[0])
+        code = {f["file"]: [s["name"] for s in f["symbols"]] for f in data["graph"]["code"]}
+        self.assertEqual(code, {"src/controller.c": ["clamp", "rvc_init", "rvc_front", "rvc_tick"],
+                                "src/unused.c": ["spare"]})
+        files = [f["file"] for f in data["graph"]["code"]]
+        calls = {cid: sorted((files[i], name) for i, name in pairs) for cid, pairs in data["graph"]["calls"].items()}
+        # rvc_init is reached through the fixture's SetUp(), not from the test body
+        self.assertEqual(calls["TC-CTRL-001"], [("src/controller.c", "rvc_front"), ("src/controller.c", "rvc_init"),
+                                                ("src/controller.c", "rvc_tick")])
+        self.assertEqual(calls["TC-CTRL-002"], calls["TC-CTRL-001"])
+        self.assertIn("src/unused.c", data["tree"])
+        self.assertEqual(data["config"]["framework"], "gtest")
+        self.assertIn("cmocka", data["frameworks"])
 
 
 if __name__ == "__main__":

@@ -150,6 +150,70 @@
   details.fold > summary .subj { font-weight: 600; }
   details.fold > .in { padding: 0 10px 10px; }
   .link { background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+  /* traceability graph: node kinds are told apart by shape and by hue */
+  :root { --k-spec: #257de0; --k-code: #ee7fac; }
+  @media (prefers-color-scheme: dark) { :root { --k-spec: #338ced; --k-code: #e24d8b; } }
+  body.vscode-light { --k-spec: #257de0; --k-code: #ee7fac; }
+  body.vscode-dark, body.vscode-high-contrast { --k-spec: #338ced; --k-code: #e24d8b; }
+  .gbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; }
+  .gbar input[type="search"], .gbar select, .set input, .set select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line-2); border-radius: 6px; padding: 4px 8px; }
+  .gbar input[type="search"] { width: 220px; }
+  .gbar label { color: var(--ink-2); font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; }
+  .gbar .grow { flex: 1; }
+  .gbtn { border: 1px solid var(--line-2); background: var(--surface); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+  .gbtn:hover { border-color: var(--ink); }
+  .glayout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px; align-items: start; }
+  @media (max-width: 1000px) { .glayout { grid-template-columns: 1fr; } }
+  .gstage { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .gstage svg { display: block; width: 100%; height: max(460px, calc(100vh - 310px)); cursor: grab; touch-action: none; }
+  .gstage svg.panning { cursor: grabbing; }
+  .gcols { position: absolute; top: 8px; left: 0; right: 0; display: flex; justify-content: space-around; pointer-events: none; color: var(--ink-2); font-size: 11.5px; font-weight: 600; letter-spacing: .02em; }
+  .gcols[hidden] { display: none; }
+  .glink { stroke: var(--line-2); stroke-width: 1; }
+  .glink.contain { stroke-dasharray: 2 3; }
+  .gnode { cursor: pointer; }
+  .gnode .shape { stroke: var(--surface); stroke-width: 1.5; }
+  .gnode.spec .shape { fill: var(--k-spec); } .gnode.code .shape { fill: var(--k-code); }
+  .gnode.APPROVED .shape { fill: var(--good); } .gnode.REJECTED .shape { fill: var(--critical); }
+  .gnode.ESCALATED .shape { fill: var(--serious); } .gnode.STALE .shape { fill: var(--warning); }
+  .gnode.UNVERIFIED .shape { fill: var(--idle); }
+  .gnode.gap .shape { fill: var(--surface); stroke-dasharray: 3 2; }
+  .gnode.gap.spec .shape { stroke: var(--k-spec); } .gnode.gap.code .shape { stroke: var(--k-code); }
+  .gnode .glyph { fill: #fff; font-size: 9px; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .gnode.STALE .glyph { fill: #0b0b0b; }
+  .gnode:focus { outline: none; } .gnode:focus-visible .shape, .gnode.sel .shape { stroke: var(--ink); stroke-width: 2.5; stroke-dasharray: none; }
+  .glabel { fill: var(--ink); font-size: 11px; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; display: none; }
+  .glabel.on { display: block; }
+  svg.focus .gnode:not(.hl) { opacity: .16; } svg.focus .glink:not(.hl) { opacity: .08; }
+  svg.focus .glink.hl { stroke: var(--ink); stroke-width: 1.4; }
+  .gtip { position: absolute; pointer-events: none; background: var(--ink); color: var(--surface); border-radius: 6px; padding: 6px 9px; font-size: 12px; max-width: 320px; z-index: 5; overflow-wrap: anywhere; }
+  .gtip b { display: block; } .gtip span { opacity: .8; }
+  .gzoom { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 4px; }
+  .gside { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; max-height: max(460px, calc(100vh - 310px)); overflow-y: auto; }
+  .gside h2 { overflow-wrap: anywhere; }
+  .gside ul { list-style: none; margin: 0 0 12px; padding: 0; }
+  .gside li { padding: 4px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+  .gside li:last-child { border-bottom: 0; }
+  .gside .pick { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; width: 100%; }
+  .gside .pick:hover { text-decoration: underline; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin: 0 0 12px; }
+  .legend svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; }
+  .gaps { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* settings */
+  .set fieldset { border: 0; padding: 0; margin: 0 0 18px; min-width: 0; }
+  .set legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+  .set .opt { display: grid; grid-template-columns: 20px minmax(110px, 180px) 1fr; gap: 4px 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  .set .opt .d { color: var(--ink-2); font-size: 12.5px; }
+  .set .row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .set .row input[type="text"] { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12.5px; }
+  .set .match { font-size: 12px; color: var(--ink-2); margin: -2px 0 8px; overflow-wrap: anywhere; }
+  .set .match.none { color: var(--critical); }
+  .set .adders { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .set .primary { background: var(--ink); color: var(--surface); border: 1px solid var(--ink); border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+  .set textarea { width: 100%; min-height: 190px; font-family: var(--mono); font-size: 12.5px; color: var(--ink); background: var(--sunken); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+  .set .msg { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -163,9 +227,11 @@
   </header>
   <div class="tiles" id="tiles"></div>
   <div class="tabs" role="tablist">
-    <button role="tab" id="tab-cases" aria-selected="true">테스트 케이스</button>
+    <button role="tab" id="tab-graph" aria-selected="true">추적 그래프</button>
+    <button role="tab" id="tab-cases" aria-selected="false">테스트 케이스</button>
     <button role="tab" id="tab-cov" aria-selected="false">요구사항 커버리지</button>
     <button role="tab" id="tab-code" aria-selected="false">코드 변경 (git)</button>
+    <button role="tab" id="tab-set" aria-selected="false">설정</button>
   </div>
   <main id="view"></main>
 </div>
@@ -183,16 +249,19 @@
   // selection survives a refresh of the page.
   var vsc = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : null;
   var saved = (vsc && vsc.getState()) || {};
-  var wanted = saved.id || decodeURIComponent(location.hash.slice(1));
-  if (saved.tab === "cov") wanted = "coverage";
-  if (saved.tab === "code") wanted = "code";
+  var wanted = decodeURIComponent(location.hash.slice(1));
+  // tab name <-> the word used in the page address
+  var HASH = { graph: "graph", cov: "coverage", code: "code", set: "settings" };
+  var startTab = saved.tab || Object.keys(HASH).filter(function (t) { return HASH[t] === wanted; })[0] ||
+    (D.cases.some(function (c) { return c.id === wanted; }) ? "cases" : "graph");
+  if (saved.id) wanted = saved.id;
   function fileRef(file, line, cls) {
     var label = file + ":" + line;
     if (!vsc) return el("span", { class: cls || "mono" }, label);
     return el("button", { class: "link " + (cls || "mono"), title: "편집기에서 열기",
       on: { click: function () { vsc.postMessage({ open: file, line: parseInt(line, 10) || 1 }); } } }, label);
   }
-  var state = { tab: wanted === "coverage" ? "cov" : wanted === "code" ? "code" : "cases", filter: "ALL", attempt: null,
+  var state = { tab: startTab, filter: "ALL", attempt: null,
                 id: (D.cases.filter(function (c) { return c.id === wanted; })[0] || D.cases[0] || {}).id };
 
   function el(tag, attrs, kids) {
@@ -367,10 +436,14 @@
         el("div", { class: "box mono" }, item[kind === "oracle" ? "assertion" : "item"] || "(없음)")])
     ]);
   }
+  // the configured framework's assertion pattern (a Python regex; fall back if JS rejects it)
+  var ASSERT = (function () {
+    try { return new RegExp(D.assert_re || "(?!)", "m"); } catch (e) { return /\b(EXPECT|ASSERT)_[A-Z_]+\s*\(/; }
+  })();
   function codeBlock(body) {
     var pre = el("pre", { class: "code" });
     String(body || "").split("\n").forEach(function (line, i, all) {
-      var isAssert = /\b(EXPECT|ASSERT)_[A-Z_]+\s*\(/.test(line);
+      var isAssert = ASSERT.test(line);
       pre.appendChild(isAssert ? el("span", { class: "a" }, line) : document.createTextNode(line));
       if (i < all.length - 1) pre.appendChild(document.createTextNode("\n"));
     });
@@ -543,24 +616,577 @@
     }));
   }
 
+  function showCase(id) { state.tab = "cases"; state.id = id; state.filter = "ALL"; state.attempt = null; render(); window.scrollTo(0, 0); }
+
+  // ---------------------------------------------------------------- traceability graph
+  // Nodes: cited specification lines, test cases, production code.  A test case is
+  // linked to the lines it cites and to the code it calls.
+  var GR = D.graph || { code: [], calls: {} };
+  var COVER = (D.config || {}).coverage_files || [];
+  var citedLines = (D.coverage || []).reduce(function (sum, f) { return sum + f.lines.filter(function (l) { return l.cases.length; }).length; }, 0);
+  // many cited lines make a hairball, so start with one node per specification file
+  var G = { groupSpec: citedLines > 60, groupCode: false, layout: "free", show: { spec: true, test: true, code: true },
+            sel: null, depth: 0, query: "", view: null, pos: {}, model: null, dom: null };
+  var KINDS = { spec: "명세", test: "테스트 케이스", code: "구현 코드" };
+  function base(p) { return String(p).split("/").pop(); }
+  function hash01(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 100000) / 100000; }
+
+  function buildGraph() {
+    var nodes = [], links = [], byKey = {}, seen = {};
+    function node(n) { if (!byKey[n.key]) { byKey[n.key] = n; nodes.push(n); n.adj = []; } return byKey[n.key]; }
+    function link(a, b, contain) {
+      var id = a + "|" + b;
+      if (seen[id] || !byKey[a] || !byKey[b]) return;
+      seen[id] = true;
+      links.push({ a: byKey[a], b: byKey[b], contain: !!contain });
+      byKey[a].adj.push(byKey[b]); byKey[b].adj.push(byKey[a]);
+    }
+    D.cases.forEach(function (c) {
+      node({ key: "T:" + c.id, kind: "test", label: c.id, status: c.status, c: c });
+    });
+    (D.coverage || []).forEach(function (f) {
+      var always = COVER.indexOf(f.file) >= 0;
+      if (G.groupSpec) {
+        var cited = f.lines.filter(function (l) { return l.cases.length; });
+        if (!cited.length && !always) return;
+        node({ key: "S:" + f.file, kind: "spec", label: base(f.file), file: f.file, lines: cited, gap: !cited.length,
+               text: "인용된 줄 " + cited.length + "개" });
+        cited.forEach(function (l) { l.cases.forEach(function (x) { link("T:" + x.id, "S:" + f.file); }); });
+        return;
+      }
+      f.lines.forEach(function (l) {
+        if (!l.cases.length && !always) return;
+        var key = "S:" + f.file + ":" + l.n;
+        node({ key: key, kind: "spec", label: base(f.file) + ":" + l.n, file: f.file, line: l.n, text: l.text, gap: !l.cases.length });
+        l.cases.forEach(function (x) { link("T:" + x.id, key); });
+      });
+    });
+    var reached = {};
+    Object.keys(GR.calls || {}).forEach(function (cid) { GR.calls[cid].forEach(function (x) { reached[x[0]] = true; }); });
+    (GR.code || []).forEach(function (f, i) {
+      node({ key: "C:" + f.file, kind: "code", sub: "file", label: base(f.file), file: f.file, symbols: f.symbols, gap: !reached[i] });
+    });
+    Object.keys(GR.calls || {}).forEach(function (cid) {
+      GR.calls[cid].forEach(function (x) {
+        var f = GR.code[x[0]];
+        if (!f) return;
+        if (G.groupCode) { link("T:" + cid, "C:" + f.file); return; }
+        var key = "F:" + f.file + "#" + x[1];
+        var sym = f.symbols.filter(function (s) { return s.name === x[1]; })[0] || {};
+        node({ key: key, kind: "code", sub: "fn", label: x[1] + "()", file: f.file, line: sym.line, name: x[1] });
+        link(key, "C:" + f.file, true);
+        link("T:" + cid, key);
+      });
+    });
+    // what is drawn: kind toggles, then the neighbourhood of the selection
+    var keep = {};
+    nodes.forEach(function (n) { if (G.show[n.kind]) keep[n.key] = true; });
+    if (G.depth && G.sel && byKey[G.sel]) {
+      var near = {}, frontier = [byKey[G.sel]];
+      near[G.sel] = true;
+      for (var d = 0; d < G.depth; d++) {
+        var next = [];
+        frontier.forEach(function (n) { n.adj.forEach(function (m) { if (!near[m.key] && keep[m.key]) { near[m.key] = true; next.push(m); } }); });
+        frontier = next;
+      }
+      keep = near;
+    }
+    var vn = nodes.filter(function (n) { return keep[n.key]; });
+    var vl = links.filter(function (l) { return keep[l.a.key] && keep[l.b.key]; });
+    vn.forEach(function (n) { n.deg = 0; });
+    vl.forEach(function (l) { l.a.deg++; l.b.deg++; });
+    vn.forEach(function (n) {
+      n.r = n.kind === "test" ? 8 : n.sub === "file" ? 7 + Math.min(5, Math.sqrt(n.deg)) : 4 + Math.min(5, Math.sqrt(n.deg));
+    });
+    return { nodes: vn, links: vl, byKey: byKey, all: nodes };
+  }
+
+  // Two layouts.  "free": a force layout run to rest before the first paint, so
+  // the picture does not jump.  "layer": three fixed columns (specification,
+  // test cases, production code) for reading many lines at once.
+  function layout(m) {
+    var N = m.nodes, L = m.links, col = { spec: -1, test: 0, code: 1 };
+    if (G.layout === "layer") {
+      var by = { spec: [], test: [], code: [] }, rows = Math.max(16, Math.min(34, Math.ceil(Math.sqrt(N.length * 2))));
+      N.forEach(function (n) { by[n.kind].push(n); });
+      by.code.sort(function (x, y) { return x.file < y.file ? -1 : x.file > y.file ? 1 : (x.sub === "file" ? -1 : y.sub === "file" ? 1 : (x.line || 0) - (y.line || 0)); });
+      var place = function (list, x0, dir, dx) {
+        var per = Math.min(rows, list.length) || 1;
+        list.forEach(function (n, i) {
+          var c = Math.floor(i / rows), inCol = Math.min(rows, list.length - c * rows);
+          n.x = x0 + dir * c * dx + (n.sub === "fn" ? 18 : 0); n.y = ((i % rows) - (inCol - 1) / 2) * 24;
+        });
+        return per;
+      };
+      place(by.spec, -300, -1, 40); place(by.test, 0, 1, 120); place(by.code, 300, 1, 210);
+      return;
+    }
+    var spread = 60 + 7 * Math.sqrt(N.length);
+    N.forEach(function (n) {
+      var p = G.pos[n.key];
+      if (!p) p = G.pos[n.key] = { x: col[n.kind] * spread + (hash01(n.key) - .5) * 140, y: (hash01(n.key + "y") - .5) * 360 };
+      n.x = p.x; n.y = p.y; n.vx = 0; n.vy = 0;
+    });
+    for (var s = 0, steps = 340; s < steps; s++) {
+      var a = 1 - s / steps, i, j, n, o, dx, dy, d2, d, f;
+      for (i = 0; i < N.length; i++) {
+        n = N[i];
+        for (j = i + 1; j < N.length; j++) {
+          o = N[j]; dx = n.x - o.x; dy = n.y - o.y; d2 = dx * dx + dy * dy;
+          if (d2 > 40000) continue;
+          if (d2 < 1) { dx = hash01(n.key) - .5; dy = hash01(o.key) - .5; d2 = 1; }
+          f = 520 * a / d2;
+          n.vx += dx * f; n.vy += dy * f; o.vx -= dx * f; o.vy -= dy * f;
+        }
+        n.vx += (col[n.kind] * spread - n.x) * .02 * a;
+        n.vy += -n.y * .02 * a;
+      }
+      for (i = 0; i < L.length; i++) {
+        n = L[i].a; o = L[i].b; dx = o.x - n.x; dy = o.y - n.y; d = Math.sqrt(dx * dx + dy * dy) || 1;
+        f = (d - (L[i].contain ? 24 : 56)) / d * (L[i].contain ? .25 : .07) * a;
+        n.vx += dx * f; n.vy += dy * f; o.vx -= dx * f; o.vy -= dy * f;
+      }
+      for (i = 0; i < N.length; i++) { n = N[i]; n.vx *= .6; n.vy *= .6; n.x += n.vx; n.y += n.vy; }
+    }
+    N.forEach(function (n) { G.pos[n.key].x = n.x; G.pos[n.key].y = n.y; });
+  }
+
+  var SVG = "http://www.w3.org/2000/svg";
+  function sv(tag, attrs, kids) {
+    var n = document.createElementNS(SVG, tag);
+    for (var k in (attrs || {})) n.setAttribute(k, attrs[k]);
+    (kids || []).forEach(function (c) { n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return n;
+  }
+  function shape(n) {
+    var r = n.r;
+    if (n.kind === "test") return sv("circle", { class: "shape", r: r });
+    if (n.kind === "spec") return sv("rect", { class: "shape", x: -r, y: -r, width: 2 * r, height: 2 * r, rx: 2 });
+    return sv("path", { class: "shape", d: "M0," + (-r * 1.25) + " L" + (r * 1.25) + ",0 L0," + (r * 1.25) + " L" + (-r * 1.25) + ",0 Z" });
+  }
+  function describe(n) {
+    if (n.kind === "test") return [n.label + " · " + LABEL[n.status], n.c.test];
+    if (n.kind === "spec") return [n.file + (n.line ? ":" + n.line : ""), (n.gap ? "인용한 테스트 케이스 없음 · " : "") + (n.text || "")];
+    return [n.sub === "fn" ? n.label + " — " + n.file : n.file, n.gap ? "이 파일을 호출하는 테스트 케이스가 없음" : n.sub === "fn" ? "함수" : "구현 파일"];
+  }
+
+  function drawGraph() {
+    var dom = G.dom, m = G.model = buildGraph();
+    layout(m);
+    dom.links.textContent = ""; dom.nodes.textContent = ""; dom.labels.textContent = "";
+    m.links.forEach(function (l) { l.el = sv("line", { class: "glink" + (l.contain ? " contain" : "") }); dom.links.appendChild(l.el); });
+    m.nodes.forEach(function (n) {
+      var info = describe(n);
+      n.el = sv("g", { class: "gnode " + n.kind + (n.kind === "test" ? " " + n.status : "") + (n.gap ? " gap" : ""),
+                       tabindex: "0", role: "button", "aria-label": KINDS[n.kind] + " " + info[0] + ". " + info[1] }, [shape(n)]);
+      if (n.kind === "test") n.el.appendChild(sv("text", { class: "glyph" }, [ICON[n.status] || "?"]));
+      n.lab = sv("text", { class: "glabel" }, [n.label]);
+      n.el.addEventListener("pointerenter", function (e) { hover(n, e); });
+      n.el.addEventListener("pointerleave", function () { hover(null); });
+      n.el.addEventListener("focus", function () { hover(n); });
+      n.el.addEventListener("blur", function () { hover(null); });
+      n.el.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(n.key); } });
+      n.el.addEventListener("pointerdown", function (e) { startDrag(n, e); });
+      dom.nodes.appendChild(n.el); dom.labels.appendChild(n.lab);
+    });
+    G.dom.cols.hidden = G.layout !== "layer";
+    if (!G.view) fit(); else applyView();
+    renderSide();
+  }
+  function place() {
+    G.model.links.forEach(function (l) {
+      l.el.setAttribute("x1", l.a.x); l.el.setAttribute("y1", l.a.y); l.el.setAttribute("x2", l.b.x); l.el.setAttribute("y2", l.b.y);
+    });
+    var k = G.view ? G.view.k : 1, sc = k < 1 ? Math.min(3, Math.pow(1 / k, .75)) : Math.pow(1 / k, .35);
+    var side = G.layout === "layer";
+    G.model.nodes.forEach(function (n) {
+      n.el.setAttribute("transform", "translate(" + n.x + "," + n.y + ") scale(" + sc + ")");
+      var lx = side ? (n.kind === "spec" ? -(n.r + 5) : n.r + 6) : 0, ly = side ? 3.5 : n.r + 12;
+      n.lab.setAttribute("transform", "translate(" + (n.x + lx * sc) + "," + (n.y + ly * sc) + ") scale(" + sc + ")");
+      n.lab.style.textAnchor = side ? (n.kind === "spec" ? "end" : "start") : "middle";
+    });
+  }
+  function applyView() {
+    G.dom.view.setAttribute("transform", "translate(" + G.view.x + "," + G.view.y + ") scale(" + G.view.k + ")");
+    place();
+    mark();
+  }
+  function fit() {
+    var N = G.model.nodes, box = G.dom.svg.getBoundingClientRect();
+    if (!N.length || !box.width) { G.view = { x: box.width / 2 || 400, y: box.height / 2 || 300, k: 1 }; applyView(); return; }
+    var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    N.forEach(function (n) { x0 = Math.min(x0, n.x); x1 = Math.max(x1, n.x); y0 = Math.min(y0, n.y); y1 = Math.max(y1, n.y); });
+    var pad = G.layout === "layer" ? 330 : 130;
+    var k = Math.min(1.8, (box.width - pad) / Math.max(1, x1 - x0), (box.height - 110) / Math.max(1, y1 - y0));
+    G.view = { k: k, x: box.width / 2 - (x0 + x1) / 2 * k, y: box.height / 2 - (y0 + y1) / 2 * k + 8 };
+    applyView();
+  }
+  function zoom(factor, cx, cy) {
+    var box = G.dom.svg.getBoundingClientRect(), v = G.view;
+    if (cx === undefined) { cx = box.width / 2; cy = box.height / 2; }
+    var k = Math.max(.15, Math.min(6, v.k * factor));
+    v.x = cx - (cx - v.x) * k / v.k; v.y = cy - (cy - v.y) * k / v.k; v.k = k;
+    applyView();
+  }
+  // highlight: the node under the pointer, else the selection, else the search hits
+  function mark(over) {
+    var m = G.model, hot = over || (G.sel && m.byKey[G.sel]) || null, q = G.query.trim().toLowerCase(), on = {};
+    if (hot) { on[hot.key] = true; hot.adj.forEach(function (x) { on[x.key] = true; }); }
+    else if (q) m.nodes.forEach(function (n) { if (describe(n).join(" ").toLowerCase().indexOf(q) >= 0) on[n.key] = true; });
+    var focus = !!hot || !!q, k = G.view ? G.view.k : 1;
+    G.dom.svg.classList.toggle("focus", focus);
+    m.nodes.forEach(function (n) {
+      n.el.classList.toggle("hl", !!on[n.key]);
+      n.el.classList.toggle("sel", n.key === G.sel);
+      var show = focus ? !!on[n.key] && (!!hot || Object.keys(on).length <= 40)
+        : G.layout === "layer" ? (n.kind !== "spec" || m.nodes.length <= 90 || k >= 1.3)
+        : n.kind === "test" ? k >= 1.25 : n.kind === "spec" && n.line ? k >= 1.5 : n.sub === "fn" ? k >= 1.1 : k >= .5;
+      n.lab.classList.toggle("on", show);
+    });
+    m.links.forEach(function (l) { l.el.classList.toggle("hl", hot ? (l.a === hot || l.b === hot) : !!(on[l.a.key] && on[l.b.key])); });
+  }
+  function hover(n, e) {
+    var tip = G.dom.tip;
+    if (!n || G.dragging) { tip.hidden = true; if (!G.dragging) mark(); return; }
+    var info = describe(n), box = G.dom.stage.getBoundingClientRect();
+    tip.textContent = "";
+    tip.appendChild(el("b", {}, KINDS[n.kind] + " · " + info[0]));
+    tip.appendChild(el("span", {}, info[1].length > 160 ? info[1].slice(0, 160) + "…" : info[1]));
+    tip.hidden = false;
+    var x = n.x * G.view.k + G.view.x + 14, y = n.y * G.view.k + G.view.y + 14;
+    tip.style.left = Math.max(4, Math.min(box.width - 330, x)) + "px";
+    tip.style.top = Math.max(4, Math.min(box.height - 70, y)) + "px";
+    mark(n);
+  }
+  function select(key) {
+    G.sel = G.sel === key ? null : key;
+    if (G.depth) { G.view = null; drawGraph(); } else { mark(); renderSide(); }
+  }
+  function startDrag(n, e) {
+    e.stopPropagation();
+    var sx = e.clientX, sy = e.clientY, moved = false;
+    n.el.setPointerCapture(e.pointerId);
+    function move(ev) {
+      if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) < 4) return;
+      moved = true; G.dragging = true; G.dom.tip.hidden = true;
+      n.x += ev.movementX / G.view.k; n.y += ev.movementY / G.view.k;
+      if (G.pos[n.key]) { G.pos[n.key].x = n.x; G.pos[n.key].y = n.y; }
+      place();
+    }
+    function up() {
+      n.el.removeEventListener("pointermove", move); n.el.removeEventListener("pointerup", up);
+      G.dragging = false;
+      if (!moved) select(n.key);
+    }
+    n.el.addEventListener("pointermove", move); n.el.addEventListener("pointerup", up);
+  }
+
+  function pick(n, text) {
+    return el("button", { class: "pick", on: { click: function () {
+      if (!G.model.byKey[n.key] || !G.show[n.key.charAt(0) === "S" ? "spec" : n.key.charAt(0) === "T" ? "test" : "code"]) {
+        // the node is not drawn in the current grouping: switch to the one that has it
+        if (n.key.charAt(0) === "S") { G.groupSpec = false; G.show.spec = true; }
+        G.sel = n.key; G.view = null; render();
+        return;
+      }
+      G.sel = null; select(n.key); } } }, text);
+  }
+  function sideList(title, items, empty) {
+    return [el("h3", {}, title + " (" + items.length + ")"),
+      items.length ? el("ul", {}, items.map(function (x) { return el("li", {}, x); })) : el("p", { class: "note" }, empty)];
+  }
+  function renderSide() {
+    var side = G.dom.side, m = G.model, n = G.sel && m.byKey[G.sel];
+    side.textContent = "";
+    if (!n) {
+      // lines of the requirement files that no test case cites, whatever the grouping
+      var gapsS = [];
+      (D.coverage || []).forEach(function (f) {
+        if (COVER.indexOf(f.file) < 0) return;
+        f.lines.forEach(function (l) { if (!l.cases.length) gapsS.push({ key: "S:" + f.file + ":" + l.n, label: base(f.file) + ":" + l.n, text: l.text }); });
+      });
+      var gapsC = m.all.filter(function (x) { return x.kind === "code" && x.sub === "file" && x.gap; });
+      side.appendChild(el("div", {}, [
+        el("h2", {}, "한눈에 보기"),
+        el("p", { class: "note" }, "테스트 케이스가 어떤 명세를 근거로 삼고 어떤 구현 코드를 호출하는지 보여 줍니다. 점을 누르면 연결된 것만 남고, 여기에 내용이 나옵니다. 끌어서 옮기고, 휠로 확대합니다."),
+        el("div", { class: "legend" }, [
+          el("span", {}, [legendMark("spec"), "명세 (줄 또는 파일)"]), el("span", {}, [legendMark("test"), "테스트 케이스 (색 = 승인 상태)"]),
+          el("span", {}, [legendMark("code"), "구현 파일·함수"]), el("span", {}, [legendMark("gap"), "점선 = 연결 없음"])]),
+        el("div", { class: "legend" }, ["APPROVED", "REJECTED", "ESCALATED", "STALE", "UNVERIFIED"].filter(count).map(function (st) {
+          return el("span", {}, [el("span", { class: "dot " + st, "aria-hidden": "true" }, ICON[st]), " " + LABEL[st] + " " + count(st)]);
+        })),
+        sideList("테스트 케이스가 인용하지 않은 요구사항 줄", gapsS.map(function (x) { return pick(x, x.label + "  " + (x.text || "")); }),
+          COVER.length ? "모든 줄이 인용됐습니다." : "설정의 coverage_files 에 요구사항 파일을 넣으면 인용되지 않은 줄이 여기에 나옵니다."),
+        sideList("테스트 케이스가 호출하지 않는 구현 파일", gapsC.map(function (x) { return pick(x, x.file); }), "모든 구현 파일이 테스트에서 호출됩니다."),
+        el("p", { class: "note" }, "테스트 → 구현 코드 연결은 테스트 본문(같은 파일의 픽스처·헬퍼 포함)이 호출하는 함수 이름을 구현 코드의 정의와 맞춰 본 것입니다. 이름 기준이라 실행 경로와 다를 수 있습니다.")]));
+      return;
+    }
+    var near = function (kind) { return n.adj.filter(function (x) { return x.kind === kind; }); };
+    var tests = near("test").map(function (x) { return pick(x, [badge(x.status, x.label), " ", el("span", { class: "sub" }, x.c.test)]); });
+    var kids = [el("div", { class: "col-label" }, KINDS[n.kind])];
+    if (n.kind === "test") {
+      kids.push(el("h2", {}, n.label), el("div", {}, badge(n.status)), el("div", { class: "mono" }, n.c.test),
+        el("div", {}, fileRef(n.c.file, n.c.line, "sub mono")),
+        n.c.objective ? el("p", {}, n.c.objective) : null,
+        el("p", {}, el("button", { class: "gbtn", on: { click: function () { showCase(n.c.id); } } }, "검증 과정 보기 →")));
+      kids = kids.concat(sideList("인용한 명세", near("spec").map(function (x) { return pick(x, [el("span", { class: "mono" }, x.label), "  " + (x.text || "")]); }), "인용한 명세가 없습니다."));
+      kids = kids.concat(sideList("호출하는 구현 코드", near("code").map(function (x) { return pick(x, [el("span", { class: "mono" }, x.label), "  " + (x.sub === "fn" ? x.file : "")]); }), "구현 코드의 함수를 호출하지 않습니다 (아직 구현 전이거나, 이름으로 찾지 못함)."));
+    } else if (n.kind === "spec") {
+      kids.push(el("h2", { class: "mono" }, n.file + (n.line ? ":" + n.line : "")),
+        n.line ? el("div", {}, fileRef(n.file, n.line, "sub mono")) : null,
+        n.line ? el("p", { class: "box" }, n.text) : null);
+      kids = kids.concat(sideList("이 " + (n.line ? "줄" : "파일") + "을 인용한 테스트 케이스", tests, "아직 어떤 테스트 케이스도 인용하지 않았습니다."));
+      if (!n.line) kids = kids.concat(sideList("인용된 줄", (n.lines || []).map(function (l) { return [el("span", { class: "mono" }, l.n + "  "), l.text]; }), "없음"));
+    } else {
+      kids.push(el("h2", { class: "mono" }, n.sub === "fn" ? n.label : n.file),
+        el("div", {}, fileRef(n.file, n.line || 1, "sub mono")));
+      kids = kids.concat(sideList("이 " + (n.sub === "fn" ? "함수" : "파일") + "를 호출하는 테스트 케이스", tests,
+        n.sub === "fn" ? "없음" : near("code").length ? "아래 함수를 통해 연결됩니다." : "이 파일의 함수를 호출하는 테스트 케이스가 없습니다."));
+      if (n.sub === "file") {
+        if (!G.groupCode) kids = kids.concat(sideList("테스트가 호출하는 함수", near("code").map(function (x) { return pick(x, el("span", { class: "mono" }, x.label)); }), "없음"));
+        var called = {};
+        near("code").forEach(function (x) { called[x.name] = true; });
+        var rest = (n.symbols || []).filter(function (s) { return G.groupCode || !called[s.name]; });
+        kids = kids.concat(sideList(G.groupCode ? "이 파일의 정의" : "테스트가 직접 호출하지 않는 정의", rest.map(function (s) { return el("span", { class: "mono" }, s.name + "  :" + s.line); }), "없음"));
+      }
+    }
+    kids.push(el("p", {}, el("button", { class: "gbtn", on: { click: function () { select(n.key); } } }, "선택 해제")));
+    side.appendChild(el("div", {}, kids));
+  }
+  function legendMark(kind) {
+    var s = sv("svg", { viewBox: "-8 -8 16 16", "aria-hidden": "true" });
+    var g = sv("g", { class: "gnode " + (kind === "gap" ? "spec gap" : kind === "test" ? "test APPROVED" : kind) },
+      [shape({ kind: kind === "gap" ? "spec" : kind, r: kind === "code" ? 5 : 6 })]);
+    s.appendChild(g);
+    return s;
+  }
+
+  function graphView() {
+    if (!D.cases.length) return el("div", { class: "card empty" }, "테스트 케이스가 아직 없습니다. 테스트 케이스가 생기면 명세·테스트·구현 코드의 연결이 여기에 그려집니다.");
+    var svg = sv("svg", { role: "group", "aria-label": "명세, 테스트 케이스, 구현 코드의 추적 그래프" });
+    var view = sv("g"), links = sv("g"), nodes = sv("g"), labels = sv("g");
+    view.appendChild(links); view.appendChild(nodes); view.appendChild(labels); svg.appendChild(view);
+    var tip = el("div", { class: "gtip", hidden: "" });
+    var cols = el("div", { class: "gcols", "aria-hidden": "true" }, [el("span", {}, "명세"), el("span", {}, "테스트 케이스"), el("span", {}, "구현 코드")]);
+    var stage = el("div", { class: "gstage" }, [cols, svg, tip,
+      el("div", { class: "gzoom" }, [
+        el("button", { class: "gbtn", title: "확대", "aria-label": "확대", on: { click: function () { zoom(1.3); } } }, "+"),
+        el("button", { class: "gbtn", title: "축소", "aria-label": "축소", on: { click: function () { zoom(1 / 1.3); } } }, "−"),
+        el("button", { class: "gbtn", on: { click: function () { fit(); } } }, "전체 보기")])]);
+    var side = el("aside", { class: "gside", "aria-live": "polite" });
+    G.dom = { svg: svg, view: view, links: links, nodes: nodes, labels: labels, tip: tip, stage: stage, side: side, cols: cols };
+
+    function chip(kind) {
+      return el("button", { class: "chip", "aria-pressed": String(G.show[kind]), on: { click: function (e) {
+        G.show[kind] = !G.show[kind]; e.currentTarget.setAttribute("aria-pressed", String(G.show[kind])); G.view = null; drawGraph(); } } }, KINDS[kind]);
+    }
+    function choice(label, options, get, set) {
+      var s = el("select", { on: { change: function (e) { set(e.target.value); G.view = null; drawGraph(); } } },
+        options.map(function (o) { return el("option", { value: o[0] }, o[1]); }));
+      s.value = get();
+      return el("label", {}, [label, s]);
+    }
+    var bar = el("div", { class: "gbar" }, [
+      el("input", { type: "search", placeholder: "찾기: TC-ID, 파일, 함수, 명세 문장", "aria-label": "그래프에서 찾기",
+        on: { input: function (e) { G.query = e.target.value; mark(); } } }),
+      el("span", {}, [chip("spec"), " ", chip("test"), " ", chip("code")]),
+      choice("명세", [["line", "줄 단위"], ["file", "파일 단위"]], function () { return G.groupSpec ? "file" : "line"; }, function (v) { G.groupSpec = v === "file"; G.sel = null; }),
+      choice("구현", [["fn", "함수 단위"], ["file", "파일 단위"]], function () { return G.groupCode ? "file" : "fn"; }, function (v) { G.groupCode = v === "file"; G.sel = null; }),
+      choice("배치", [["free", "자유 (연결된 것끼리 모임)"], ["layer", "층별 (명세 → 테스트 → 구현)"]], function () { return G.layout; }, function (v) { G.layout = v; }),
+      choice("범위", [["0", "전체"], ["1", "선택한 점의 이웃"], ["2", "이웃의 이웃까지"]], function () { return String(G.depth); }, function (v) { G.depth = +v; })]);
+
+    // pan with the background, zoom with the wheel
+    svg.addEventListener("pointerdown", function (e) {
+      if (e.target !== svg) return;
+      svg.setPointerCapture(e.pointerId); svg.classList.add("panning");
+      var moved = false;
+      function move(ev) { moved = true; G.view.x += ev.movementX; G.view.y += ev.movementY; applyView(); }
+      function up() { svg.removeEventListener("pointermove", move); svg.removeEventListener("pointerup", up); svg.classList.remove("panning");
+        if (!moved && G.sel) select(G.sel); }
+      svg.addEventListener("pointermove", move); svg.addEventListener("pointerup", up);
+    });
+    svg.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      var box = svg.getBoundingClientRect();
+      zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - box.left, e.clientY - box.top);
+    }, { passive: false });
+
+    var root = el("div", {}, [bar, el("div", { class: "glayout" }, [stage, side])]);
+    // the svg has no size until it is in the page
+    setTimeout(function () { if (G.dom && G.dom.svg === svg) drawGraph(); }, 0);
+    return root;
+  }
+
+  // ---------------------------------------------------------------- settings
+  var FW = [["gtest", "GoogleTest", "기본값. C/C++ — TEST, TEST_F, TEST_P 블록"], ["cunit", "CUnit", "C — void test_xxx(void) 함수, CU_ASSERT"],
+            ["junit", "JUnit", "Java, Kotlin — @Test 메서드"], ["cmocka", "CMocka", "C — void xxx(void **state) 함수, assert_*"],
+            ["unity", "Unity", "C — void test_xxx(void) 함수, TEST_ASSERT"], ["pytest", "pytest", "Python — def test_xxx (unittest 형식 포함)"],
+            ["jest", "Jest / Vitest / Mocha", "JavaScript, TypeScript — it(...), test(...)"], ["go", "Go testing", "Go — func TestXxx"]];
+  var S = null;                     // the form's working copy of the configuration
+  function globRe(glob) {
+    var out = "", i = 0;
+    while (i < glob.length) {
+      if (glob.substr(i, 3) === "**/") { out += "(?:[^/]+/)*"; i += 3; }
+      else if (glob.substr(i, 2) === "**") { out += ".*"; i += 2; }
+      else if (glob[i] === "*") { out += "[^/]*"; i++; }
+      else if (glob[i] === "?") { out += "[^/]"; i++; }
+      else { out += glob[i].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); i++; }
+    }
+    return new RegExp("^(?:" + out + ")$");
+  }
+  function matching(globs) {
+    var res = globs.filter(function (g) { return g.trim(); }).map(function (g) { return globRe(g.trim()); });
+    return (D.tree || []).filter(function (f) { return res.some(function (r) { return r.test(f); }); });
+  }
+  function settingsView() {
+    var cfg = D.config || {}, fws = D.frameworks || {};
+    if (!S) {
+      var defaults = (fws[cfg.framework] || {}).globs || [];
+      S = { framework: cfg.framework || "gtest", defaultTests: JSON.stringify(cfg.test_globs || []) === JSON.stringify(defaults),
+            test_globs: (cfg.test_globs || []).slice(), production_globs: (cfg.production_globs || []).slice(),
+            spec_globs: (cfg.spec_globs || []).slice(), coverage_files: (cfg.coverage_files || []).slice(),
+            language: cfg.language || "ko", max_attempts: cfg.max_attempts || 3, msg: null };
+    }
+    var known = FW.filter(function (f) { return fws[f[0]] || !D.frameworks; });
+    var custom = known.every(function (f) { return f[0] !== S.framework; });
+    function tests() { return S.defaultTests ? ((fws[S.framework] || {}).globs || []) : S.test_globs; }
+    function output() {
+      var o = { framework: S.framework };
+      if (!S.defaultTests) o.test_globs = S.test_globs.filter(String);
+      o.production_globs = S.production_globs.filter(String); o.spec_globs = S.spec_globs.filter(String);
+      o.coverage_files = S.coverage_files.filter(String); o.language = S.language; o.max_attempts = Math.max(1, parseInt(S.max_attempts, 10) || 3);
+      return o;
+    }
+    function again() { var v = document.getElementById("view"); v.textContent = ""; v.appendChild(settingsView()); }
+    var dirs = {};
+    (D.tree || []).forEach(function (f) { var p = f.split("/"); for (var i = 1; i < p.length && i <= 3; i++) dirs[p.slice(0, i).join("/")] = true; });
+    var dirList = Object.keys(dirs).sort();
+
+    // one editable list of globs (or file paths), with the files it matches shown live
+    function listEditor(key, opts) {
+      var box = el("div", {}), info = el("div", { class: "match" });
+      function refresh() {
+        var files = opts.files ? S[key].filter(function (f) { return (D.tree || []).indexOf(f) >= 0; }) : opts.count(S[key]);
+        var missing = opts.files ? S[key].filter(function (f) { return f && (D.tree || []).indexOf(f) < 0; }) : [];
+        info.className = "match" + (files.length || !S[key].filter(String).length ? "" : " none");
+        info.textContent = opts.files
+          ? (missing.length ? "프로젝트에 없는 파일: " + missing.join(", ") : files.length + "개 파일")
+          : "일치하는 파일 " + files.length + "개" + (files.length ? " · 예: " + files.slice(0, 3).join(", ") : " — 이 위치에 해당하는 파일이 아직 없습니다");
+      }
+      function draw() {
+        box.textContent = "";
+        S[key].forEach(function (g, i) {
+          box.appendChild(el("div", { class: "row" }, [
+            el("input", { type: "text", value: g, "aria-label": opts.label + " " + (i + 1), list: opts.files ? "set-files" : null,
+              on: { input: function (e) { S[key][i] = e.target.value; refresh(); sync(); } } }),
+            el("button", { class: "gbtn", "aria-label": "삭제", title: "삭제", on: { click: function () { S[key].splice(i, 1); draw(); sync(); } } }, "✕")]));
+        });
+        var add = el("select", { "aria-label": opts.label + ": 폴더에서 추가", on: { change: function (e) {
+          if (!e.target.value) return;
+          S[key].push(opts.files ? e.target.value : e.target.value + "/**"); draw(); sync(); } } },
+          [el("option", { value: "" }, opts.files ? "파일 고르기…" : "폴더 고르기…")].concat(
+            (opts.files ? matching(S.spec_globs) : dirList).map(function (d) { return el("option", { value: d }, d); })));
+        box.appendChild(el("div", { class: "adders" }, [add,
+          el("button", { class: "gbtn", on: { click: function () { S[key].push(""); draw(); } } }, "직접 입력")]));
+        box.appendChild(info);
+        refresh();
+      }
+      draw();
+      return box;
+    }
+    var out = el("textarea", { readonly: "", "aria-label": "config.json 내용" });
+    var summary = el("p", { class: "note" });
+    function sync() {
+      out.value = JSON.stringify(output(), null, 2) + "\n";
+      var t = matching(tests());
+      var p = matching(S.production_globs).filter(function (f) { return t.indexOf(f) < 0 && !/\.trace\.json$/.test(f); });
+      summary.textContent = "이 설정이면: 테스트 파일 " + t.length + "개 · 잠기는 구현 파일 " + p.length + "개 · 인용 가능한 명세 파일 " + matching(S.spec_globs).length + "개";
+    }
+    var testBox = el("div", {});
+    function drawTests() {
+      testBox.textContent = "";
+      testBox.appendChild(el("label", {}, [el("input", { type: "checkbox", checked: S.defaultTests ? "" : null, on: { change: function (e) {
+        S.defaultTests = e.target.checked;
+        if (!S.defaultTests && !S.test_globs.length) S.test_globs = ((fws[S.framework] || {}).globs || []).slice();
+        drawTests(); sync(); } } }), " 프레임워크의 기본 위치 사용"]));
+      if (S.defaultTests) testBox.appendChild(el("div", { class: "match" }, tests().join(", ") + " — 일치하는 파일 " + matching(tests()).length + "개"));
+      else testBox.appendChild(listEditor("test_globs", { label: "테스트 위치", count: matching }));
+    }
+    drawTests();
+
+    var save = el("div", {});
+    if (vsc) {
+      save.appendChild(el("button", { class: "primary", on: { click: function () { S.msg = "저장 중…"; vsc.postMessage({ saveConfig: output() }); again(); } } }, "설정 저장"));
+      save.appendChild(el("p", { class: "note msg" }, S.msg || "저장하면 " + (D.config_file || ".accepttc/config.json") + " 을 고치고 이 페이지를 다시 만듭니다."));
+    } else {
+      save.appendChild(el("p", { class: "note" }, "브라우저에서 연 페이지는 파일을 직접 고칠 수 없습니다. 아래 내용을 " + (D.config_file || ".accepttc/config.json") +
+        " 에 저장한 뒤 python3 .accepttc/tc_gate.py dashboard 를 실행하면 반영됩니다. VS Code 확장의 검증 현황 탭에서는 여기서 바로 저장됩니다."));
+      save.appendChild(el("div", { class: "adders" }, [
+        el("button", { class: "primary", on: { click: function () {
+          var a = el("a", { href: URL.createObjectURL(new Blob([out.value], { type: "application/json" })), download: "config.json" });
+          document.body.appendChild(a); a.click(); a.remove(); } } }, "config.json 내려받기"),
+        el("button", { class: "gbtn", on: { click: function (e) {
+          out.select();
+          var done = function () { e.target.textContent = "복사했습니다"; };
+          if (navigator.clipboard) navigator.clipboard.writeText(out.value).then(done, function () { document.execCommand("copy"); done(); });
+          else { document.execCommand("copy"); done(); } } } }, "내용 복사")]));
+    }
+    var root = el("section", { class: "card set" }, [
+      el("h2", {}, "프로젝트 설정"),
+      el("p", { class: "note" }, "테스트 프레임워크와 폴더 구조를 정합니다. 설정은 사람만 바꿀 수 있고, 에이전트의 수정은 훅이 막습니다. 프레임워크나 테스트 위치를 바꾸면 테스트 케이스를 다시 찾으므로, 찾지 못한 테스트 케이스의 승인 기록은 쓰이지 않습니다."),
+      D.config_error ? el("p", { class: "tag bad" }, [el("i", {}, "✕"), " " + D.config_error]) : null,
+      el("fieldset", {}, [el("legend", {}, "테스트 프레임워크"),
+        known.map(function (f) {
+          return el("label", { class: "opt" }, [
+            el("input", { type: "radio", name: "fw", value: f[0], checked: S.framework === f[0] ? "" : null,
+              on: { change: function () { S.framework = f[0]; drawTests(); sync(); } } }),
+            el("span", {}, f[1]), el("span", { class: "d" }, f[2])]);
+        }),
+        custom ? el("p", { class: "note" }, "현재 값 \"" + S.framework + "\" 은(는) 이 목록에 없는 직접 정의 프레임워크입니다. 위에서 하나를 고르면 바뀝니다.") : null]),
+      el("fieldset", {}, [el("legend", {}, "테스트 파일 위치"), testBox]),
+      el("fieldset", {}, [el("legend", {}, "구현 코드 위치 (테스트 케이스가 모두 승인될 때까지 잠김)"),
+        listEditor("production_globs", { label: "구현 코드 위치", count: function (g) {
+          var t = matching(tests()); return matching(g).filter(function (f) { return t.indexOf(f) < 0 && !/\.trace\.json$/.test(f); }); } })]),
+      el("fieldset", {}, [el("legend", {}, "명세 문서 위치 (근거로 인용할 수 있는 파일)"), listEditor("spec_globs", { label: "명세 위치", count: matching })]),
+      el("fieldset", {}, [el("legend", {}, "요구사항 파일 (인용되지 않은 줄까지 항상 표시)"),
+        el("datalist", { id: "set-files" }, matching(S.spec_globs).map(function (f) { return el("option", { value: f }); })),
+        listEditor("coverage_files", { label: "요구사항 파일", files: true })]),
+      el("fieldset", {}, [el("legend", {}, "그 밖의 설정"),
+        el("div", { class: "adders" }, [
+          el("label", {}, ["설명 언어 ", (function () {
+            var s = el("select", { on: { change: function (e) { S.language = e.target.value; sync(); } } },
+              [["ko", "한국어"], ["en", "영어"], ["any", "제한 없음"]].map(function (o) { return el("option", { value: o[0] }, o[1]); }));
+            s.value = S.language; return s; })()]),
+          el("label", {}, ["거부 허용 횟수 ", el("input", { type: "number", min: "1", max: "9", value: S.max_attempts, style: "width:64px",
+            on: { input: function (e) { S.max_attempts = e.target.value; sync(); } } })])])]),
+      summary, save,
+      fold([el("span", { class: "subj" }, "config.json 내용 보기")], out, !vsc)]);
+    sync();
+    return root;
+  }
+
+  var TABS = { graph: graphView, cases: casesView, cov: coverageView, code: codeView, set: settingsView };
   function render() {
-    document.getElementById("tab-cases").setAttribute("aria-selected", String(state.tab === "cases"));
-    document.getElementById("tab-cov").setAttribute("aria-selected", String(state.tab === "cov"));
-    document.getElementById("tab-code").setAttribute("aria-selected", String(state.tab === "code"));
+    Object.keys(TABS).forEach(function (t) { document.getElementById("tab-" + t).setAttribute("aria-selected", String(state.tab === t)); });
     var view = document.getElementById("view");
     if (vsc) vsc.setState({ id: state.id, tab: state.tab });
-    try { history.replaceState(null, "", "#" + (state.tab === "cov" ? "coverage" : state.tab === "code" ? "code" : encodeURIComponent(state.id || ""))); } catch (e) {}
+    try { history.replaceState(null, "", "#" + (HASH[state.tab] || encodeURIComponent(state.id || ""))); } catch (e) {}
     view.textContent = "";
-    view.appendChild(state.tab === "cases" ? casesView() : state.tab === "cov" ? coverageView() : codeView());
+    view.appendChild(TABS[state.tab]());
   }
-  document.getElementById("tab-cases").addEventListener("click", function () { state.tab = "cases"; render(); });
-  document.getElementById("tab-cov").addEventListener("click", function () { state.tab = "cov"; render(); });
-  document.getElementById("tab-code").addEventListener("click", function () { state.tab = "code"; render(); });
+  Object.keys(TABS).forEach(function (t) {
+    document.getElementById("tab-" + t).addEventListener("click", function () { state.tab = t; render(); });
+  });
   renderTop();
   render();
   if (vsc) {
     // the extension's sidebar can ask the page to show one test case
     window.addEventListener("message", function (e) {
+      if (e.data && e.data.configSaved !== undefined && S) {
+        S.msg = e.data.configSaved ? "저장했습니다. 페이지를 다시 만드는 중…" : "저장하지 않았습니다: " + (e.data.error || "취소됨");
+        if (state.tab === "set") render();
+        return;
+      }
       var id = e.data && e.data.select;
       if (!id || !D.cases.some(function (c) { return c.id === id; })) return;
       state.tab = "cases"; state.id = id; state.filter = "ALL"; state.attempt = null;
