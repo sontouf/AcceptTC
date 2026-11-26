@@ -29,10 +29,16 @@ AI 코딩 에이전트가 쓴 테스트 케이스가 명세에 근거해 정확�
 
 검증이 기록되거나 테스트·근거 기록 파일을 저장하면 화면이 자동으로 갱신됩니다. 화면의 파일 이름(`tests/foo_test.cpp:12`)을 누르면 편집기에서 그 줄이 열립니다.
 
-## 확장 설치
+## 확장 설치와 제거
+
+VS Code 의 확장 보기(Ctrl+Shift+X)에서 **AcceptTC** 를 검색해 **설치**를 누릅니다. 제거할 때는 같은 곳에서 **제거**를 누릅니다.
+
+확장을 제거해도 프로젝트에 설치한 게이트(`.accepttc/`, 훅, 검증 에이전트)는 그대로 남아 계속 동작합니다. 프로젝트에서도 걷어내려면 확장을 제거하기 전에 **AcceptTC: 이 프로젝트에서 제거**를 실행하세요.
+
+파일로 설치하려면 [저장소](https://github.com/sontouf/AcceptTC/tree/main/vscode-extension)의 `.vsix` 를 받아 다음을 실행합니다.
 
 ```bash
-code --install-extension accepttc-0.4.0.vsix
+code --install-extension accepttc-0.4.1.vsix
 ```
 
 WSL 이나 원격 환경에서는 프로젝트가 있는 쪽(WSL/원격)에 설치하세요. `python3` 대신 다른 명령을 쓰려면 설정 `accepttc.python` 을 바꿉니다.

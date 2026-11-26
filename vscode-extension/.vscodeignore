@@ -1,2 +1,5 @@
-node_modules/
 build.sh
+publish.sh
+*.vsix
+node_modules/
+.gitignore

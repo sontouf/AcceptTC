@@ -2,9 +2,31 @@
   "name": "accepttc",
   "displayName": "AcceptTC",
   "description": "테스트 케이스 승인 게이트(AcceptTC)를 프로젝트에 설치하고, 테스트 케이스별 검증 상태와 과정을 VS Code 안에서 봅니다. 서버가 필요 없습니다.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "sontouf",
   "license": "MIT",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1b2640",
+    "theme": "dark"
+  },
+  "keywords": [
+    "accepttc",
+    "test case",
+    "tdd",
+    "claude code",
+    "ai agent",
+    "traceability",
+    "requirements",
+    "verification",
+    "approval gate",
+    "테스트 케이스",
+    "검증"
+  ],
+  "homepage": "https://github.com/sontouf/AcceptTC#readme",
+  "bugs": {
+    "url": "https://github.com/sontouf/AcceptTC/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/sontouf/AcceptTC.git"
@@ -14,6 +36,7 @@
   },
   "categories": [
     "Testing",
+    "AI",
     "Other"
   ],
   "extensionKind": [

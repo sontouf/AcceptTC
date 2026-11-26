@@ -34,7 +34,7 @@ Linux(WSL 포함)에서 다음이 필요합니다. 없으면 설치 스크립트
 
 **VS Code 확장으로** (확장 하나만 있으면 됩니다)
 
-1. [`vscode-extension/accepttc-0.4.0.vsix`](vscode-extension/accepttc-0.4.0.vsix)를 받아 설치합니다: `code --install-extension accepttc-0.4.0.vsix`
+1. VS Code 의 확장 보기(Ctrl+Shift+X)에서 **AcceptTC** 를 검색해 설치합니다. 파일로 설치하려면 [`vscode-extension/accepttc-0.4.1.vsix`](vscode-extension/accepttc-0.4.1.vsix)를 받아 `code --install-extension accepttc-0.4.1.vsix` 를 실행합니다.
 2. 프로젝트 폴더를 열고 명령 팔레트(Ctrl+Shift+P)에서 `AcceptTC: 이 프로젝트에 설치`를 실행합니다.
 
 **한 줄로**
@@ -93,7 +93,7 @@ cd AcceptTC
   - **추적 그래프** (첫 화면): 명세, 테스트 케이스, 구현 코드를 점으로, 근거와 호출 관계를 선으로 보여줍니다. 점을 누르면 연결된 것만 남고 옆에 내용이 나옵니다. 테스트 케이스가 인용하지 않은 요구사항 줄과, 어떤 테스트도 호출하지 않는 구현 파일은 점선으로 표시됩니다. 명세는 줄 단위/파일 단위, 구현은 함수 단위/파일 단위로 바꿔 볼 수 있습니다.
   - **테스트 케이스 / 요구사항 커버리지 / 코드 변경**: 테스트 케이스별 검증 과정, 명세 줄별 인용 현황, git 변경 이력.
   - **설정**: 테스트 프레임워크와 폴더 구조(테스트, 구현 코드, 명세 위치)를 고릅니다. 위치를 고치는 동안 그 패턴에 맞는 파일 수가 바로 표시됩니다. VS Code 확장 안에서는 저장 버튼으로 바로 반영되고, 브라우저에서는 `config.json`을 내려받아 `.accepttc/`에 넣습니다.
-- **VS Code**: 확장을 설치하면 왼쪽 활동 표시줄에 AcceptTC 아이콘이 생깁니다. 확장은 `code --install-extension vscode-extension/accepttc-0.4.0.vsix` 또는 `./install.sh --vscode`로 설치합니다.
+- **VS Code**: 확장을 설치하면 왼쪽 활동 표시줄에 AcceptTC 아이콘이 생깁니다. 확장은 확장 보기에서 AcceptTC 를 검색해 설치하거나, `code --install-extension vscode-extension/accepttc-0.4.1.vsix` 또는 `./install.sh --vscode`로 설치합니다.
   - **사이드바 목록**: 구현 코드가 잠겼는지와, 테스트 케이스를 상태별(거부, 미검증, 승인 등)로 보여줍니다. 테스트 케이스를 펼치면 테스트 코드, 인용한 명세 줄, 검증 회차별 보고서로 바로 갈 수 있습니다.
   - **코드 위 표시**: 테스트 파일을 열면 각 테스트 케이스 위에 `✓ TC-XXX-001 · 승인`처럼 상태가 나오고, 누르면 그 테스트 케이스의 검증 과정이 열립니다.
   - **상태 표시줄**: `TC 승인 수/전체 수`.

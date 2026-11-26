@@ -4,7 +4,8 @@
 //   specification sources and verification attempts.
 // - CodeLens above each test case in the editor: its approval state.
 // - Status bar: approved / total.
-// - Verification page (the HTML tc_gate.py generates) in an editor tab.
+// - Verification page (the HTML tc_gate.py generates) in an editor tab.  It
+//   opens by itself when the AcceptTC sidebar is shown; no click is needed.
 // - Install / uninstall AcceptTC in a project from the command palette; the
 //   installer travels inside the extension (payload/).
 //
@@ -23,6 +24,8 @@ const COLOR = { APPROVED: "testing.iconPassed", REJECTED: "testing.iconFailed", 
 
 let context = null;
 let panel = null;          // the open verification page, if any
+let view = null;           // the sidebar tree view
+let opening = false;       // the page is being opened by autoOpen
 let pendingSelect = null;  // test case to show once the page has loaded
 let statusItem = null;
 let output = null;
@@ -211,13 +214,21 @@ async function openFile(file, line) {
   }
 }
 
-async function openDashboard(selectId) {
+/** Show the verification page as soon as the sidebar is visible, without a click. */
+async function autoOpen() {
+  if (opening || panel || !view || !view.visible || !model.root || model.error) return;
+  opening = true;
+  try { await openDashboard(null, true); } finally { opening = false; }
+}
+
+async function openDashboard(selectId, keepFocus) {
   const root = await pickProject();
   if (!root) return;
   model.root = root;
   pendingSelect = typeof selectId === "string" ? selectId : null;
   if (!panel) {
-    panel = vscode.window.createWebviewPanel("accepttc.dashboard", "AcceptTC 검증 현황", vscode.ViewColumn.Beside,
+    panel = vscode.window.createWebviewPanel("accepttc.dashboard", "AcceptTC 검증 현황",
+      { viewColumn: vscode.ViewColumn.Beside, preserveFocus: !!keepFocus },
       { enableScripts: true, retainContextWhenHidden: true, enableFindWidget: true });
     panel.onDidDispose(() => { panel = null; });
     panel.webview.onDidReceiveMessage((msg) => {
@@ -378,7 +389,8 @@ function activate(ctx) {
   });
 
   ctx.subscriptions.push(output, statusItem, recorded, traces, saved, treeChanged, lensChanged,
-    vscode.window.registerTreeDataProvider("accepttc.cases", tree),
+    (view = vscode.window.createTreeView("accepttc.cases", { treeDataProvider: tree })),
+    view.onDidChangeVisibility(() => autoOpen()),
     vscode.languages.registerCodeLensProvider({ scheme: "file" }, lenses),
     vscode.commands.registerCommand("accepttc.openDashboard", () => openDashboard()),
     vscode.commands.registerCommand("accepttc.showCase", (id) => openDashboard(id && id.row ? id.row.id : id)),
@@ -405,7 +417,7 @@ function activate(ctx) {
       "AcceptTC 를 제거할 프로젝트 폴더",
       "{folder}\n\n이 폴더에서 AcceptTC 를 제거합니다. 설정과 승인 기록(.accepttc/)은 남기고, Entire 는 그대로 둡니다.",
       "제거")));
-  return reload();
+  return reload().then(autoOpen);
 }
 
 function deactivate() { clearTimeout(timer); }

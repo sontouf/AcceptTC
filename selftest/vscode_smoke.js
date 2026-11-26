@@ -31,7 +31,7 @@ const vscode = {
   window: {
     createOutputChannel: () => ({ appendLine: (l) => state.messages.push(l), show() {}, dispose() {} }),
     createStatusBarItem: () => (state.status = { show() {}, hide() {}, dispose() {} }),
-    registerTreeDataProvider: () => disposable,
+    createTreeView: () => ({ visible: true, onDidChangeVisibility: () => disposable, dispose() {} }),
     createWebviewPanel: () => (state.panel = {
       webview: { html: "", onDidReceiveMessage(fn) { state.onMessage = fn; }, postMessage: (m) => state.posted.push(m) },
       onDidDispose() {}, reveal() {} }),
@@ -59,6 +59,9 @@ const check = (name, ok) => { console.log((ok ? "ok   " : "FAIL ") + name); if (
   const rows = getModel().rows;
   check("status read: " + rows.length + " test case(s), status bar '" + state.status.text + "'", rows.length > 0 && /TC \d+\/\d+/.test(state.status.text));
   check("installed context key set", state.context["accepttc.installed"] === true);
+
+  // the page opens with the sidebar, before anything is clicked
+  check("page opened without a click", !!state.panel && state.panel.webview.html.includes('id="data"'));
 
   // sidebar: lock line, status groups, test cases, details
   const top = tree.getChildren();
